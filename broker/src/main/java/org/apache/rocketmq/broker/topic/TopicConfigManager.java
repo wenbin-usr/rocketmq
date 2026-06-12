@@ -628,10 +628,10 @@ public class TopicConfigManager extends ConfigManager {
 
     public TopicConfigSerializeWrapper buildTopicConfigSerializeWrapper() {
         TopicConfigSerializeWrapper topicConfigSerializeWrapper = new TopicConfigSerializeWrapper();
-        topicConfigSerializeWrapper.setTopicConfigTable(this.topicConfigTable);
         DataVersion dataVersionCopy = new DataVersion();
         dataVersionCopy.assignNewOne(this.dataVersion);
         topicConfigSerializeWrapper.setDataVersion(dataVersionCopy);
+        topicConfigSerializeWrapper.setTopicConfigTable(new ConcurrentHashMap<>(this.topicConfigTable));
         return topicConfigSerializeWrapper;
     }
 
@@ -647,6 +647,9 @@ public class TopicConfigManager extends ConfigManager {
         topicConfigWrapper.setTopicConfigTable(topicConfigTable);
         topicConfigWrapper.setTopicQueueMappingInfoMap(topicQueueMappingInfoMap);
         topicConfigWrapper.setDataVersion(this.getDataVersion());
+        if (this.brokerController.getBrokerConfig().isEnableSplitRegistration()) {
+            this.getDataVersion().nextVersion();
+        }
         return topicConfigWrapper;
     }
 

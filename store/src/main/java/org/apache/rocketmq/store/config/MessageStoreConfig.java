@@ -473,6 +473,9 @@ public class MessageStoreConfig {
 
     private boolean rocksdbCQDoubleWriteEnable = false;
 
+    // Secondary switch of rocksdbCQDoubleWriteEnable. In CombineConsumeQueueStore, only specific topics will double-write CQ.
+    private boolean rocksdbCQSelectiveDoubleWriteEnable = false;
+
     /**
      * CombineConsumeQueueStore
      * combineCQLoadingCQTypes is used to configure the loading types of CQ. load / recover / start order: [default -> defaultRocksDB]
@@ -505,6 +508,8 @@ public class MessageStoreConfig {
 
     private String rocksdbCompressionType = CompressionType.LZ4_COMPRESSION.getLibraryName();
 
+    private int rocksdbMaxSizeAmplificationPercent = 25;
+
     private long popRocksdbBlockCacheSize = 256 * SizeUnit.MB;
 
     private long popRocksdbWriteBufferSize = 32 * SizeUnit.MB;
@@ -533,6 +538,14 @@ public class MessageStoreConfig {
 
     public void setRocksdbCompressionType(String compressionType) {
         this.rocksdbCompressionType = compressionType;
+    }
+
+    public int getRocksdbMaxSizeAmplificationPercent() {
+        return rocksdbMaxSizeAmplificationPercent;
+    }
+
+    public void setRocksdbMaxSizeAmplificationPercent(int rocksdbMaxSizeAmplificationPercent) {
+        this.rocksdbMaxSizeAmplificationPercent = rocksdbMaxSizeAmplificationPercent;
     }
 
     public long getPopRocksdbBlockCacheSize() {
@@ -574,6 +587,13 @@ public class MessageStoreConfig {
         this.rocksdbCQDoubleWriteEnable = rocksdbWriteEnable;
     }
 
+    public boolean isRocksdbCQSelectiveDoubleWriteEnable() {
+        return rocksdbCQSelectiveDoubleWriteEnable;
+    }
+
+    public void setRocksdbCQSelectiveDoubleWriteEnable(boolean rocksdbCQSelectiveDoubleWriteEnable) {
+        this.rocksdbCQSelectiveDoubleWriteEnable = rocksdbCQSelectiveDoubleWriteEnable;
+    }
 
     public boolean isEnabledAppendPropCRC() {
         return enabledAppendPropCRC;
