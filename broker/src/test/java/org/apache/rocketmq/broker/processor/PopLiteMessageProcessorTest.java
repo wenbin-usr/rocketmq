@@ -56,6 +56,7 @@ import java.util.Iterator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -111,7 +112,6 @@ public class PopLiteMessageProcessorTest {
         when(brokerController.getMessageStore()).thenReturn(messageStore);
         when(brokerController.getTopicConfigManager()).thenReturn(topicConfigManager);
         when(brokerController.getSubscriptionGroupManager()).thenReturn(subscriptionGroupManager);
-        when(brokerController.getLiteLifecycleManager()).thenReturn(liteLifecycleManager);
         when(brokerController.getLiteSubscriptionRegistry()).thenReturn(liteSubscriptionRegistry);
 
         PopLiteMessageProcessor testObject = new PopLiteMessageProcessor(brokerController, liteEventDispatcher);
@@ -147,6 +147,16 @@ public class PopLiteMessageProcessorTest {
             .thenReturn(true);
         assertTrue(popLiteMessageProcessor.isFifoBlocked("attemptId", "group", "lmqName", 1000L));
         verify(consumerOrderInfoManager).checkBlock("attemptId", "lmqName", "group", 0, 1000L);
+    }
+
+    @Test
+    public void testIsFifoBlocked_hasResetOffset() {
+        brokerConfig.setUseServerSideResetOffset(true);
+        when(consumerOffsetManager.hasOffsetReset("lmqName", "group", 0)).thenReturn(true);
+
+        assertFalse(popLiteMessageProcessor.isFifoBlocked("attemptId", "group", "lmqName", 1000L));
+        verify(consumerOffsetManager).hasOffsetReset("lmqName", "group", 0);
+        verify(consumerOrderInfoManager, never()).checkBlock(anyString(), anyString(), anyString(), anyInt(), anyLong());
     }
 
     @Test
@@ -370,18 +380,6 @@ public class PopLiteMessageProcessorTest {
         assertThat(result).isNull();
         verify(lockService).tryLock(anyString());
         verify(lockService).unlock(anyString());
-    }
-
-    @Test
-    public void testPopLiteTopic_lmqNotExist() {
-        when(liteLifecycleManager.isLmqExist("lmqName")).thenReturn(false);
-        brokerConfig.setEnableLiteEventMode(false);
-
-        Pair<StringBuilder, GetMessageResult> result = popLiteMessageProcessor.popLiteTopic("parentTopic",
-            "clientHost", "group", "lmqName", 32L, System.currentTimeMillis(), 6000L, "attemptId");
-
-        assertThat(result).isNull();
-        verify(lockService, never()).tryLock(anyString());
     }
 
     @Test

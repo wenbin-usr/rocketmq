@@ -287,10 +287,6 @@ public class PopLiteMessageProcessor implements NettyRequestProcessor {
     @VisibleForTesting
     public Pair<StringBuilder, GetMessageResult> popLiteTopic(String parentTopic, String clientHost, String group,
         String lmqName, long maxNum, long popTime, long invisibleTime, String attemptId) {
-        if (!brokerController.getBrokerConfig().isEnableLiteEventMode()
-            && !brokerController.getLiteLifecycleManager().isLmqExist(lmqName)) {
-            return null;
-        }
         String lockKey = KeyBuilder.buildPopLiteLockKey(group, lmqName);
         if (!lockService.tryLock(lockKey)) {
             return null;
@@ -311,6 +307,10 @@ public class PopLiteMessageProcessor implements NettyRequestProcessor {
     }
 
     public boolean isFifoBlocked(String attemptId, String group, String lmqName, long invisibleTime) {
+        if (brokerController.getBrokerConfig().isUseServerSideResetOffset() &&
+            this.brokerController.getConsumerOffsetManager().hasOffsetReset(lmqName, group, 0)) {
+            return false;
+        }
         return consumerOrderInfoManager.checkBlock(attemptId, lmqName, group, 0, invisibleTime);
     }
 
