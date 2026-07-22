@@ -1820,3 +1820,1479 @@ keyHash(4) phyOffset(8) timeDiff(4) prevIndex(4)
 
 > 本文档基于 Apache RocketMQ 5.5.0 源码（develop 分支，commit `686c263d9`）深入分析。
 > 所有图示采用 Mermaid 语法，支持 Mermaid 渲染器直接查看。
+
+---
+
+# 第十六章 Broker 子包源码深度剖析
+
+本章对 `broker` 模块下 27 个子包逐一进行源码级分析。Broker 模块是 RocketMQ 服务端的核心，共 168 个 Java 源文件，负责消息接收、存储调度、消费分发、事务管理、高可用、认证鉴权等全部服务端逻辑。
+
+## 16.0 BrokerController —— 总控中枢
+
+`BrokerController.java`（2825 行）是 Broker 的"上帝类"，统一管理所有子模块的生命周期。
+
+### 初始化流程
+
+`initialize()` 方法（:915）分三步：
+
+```
+initialize()
+├── initializeMetadata()       // 加载 TopicConfig、SubscriptionGroup、ConsumerOffset 等配置
+├── initializeMessageStore()   // 创建 DefaultMessageStore / TieredMessageStore
+└── recoverAndInitService()    // 恢复数据 & 初始化服务
+     ├── messageStore.load()              // 加载 CommitLog/ConsumeQueue/IndexFile
+     ├── timerMessageStore.load()         // 加载时间轮
+     ├── scheduleMessageService.load()    // 加载延迟级别偏移表
+     ├── registerMessageStoreHook()       // 注册 PutMessageHook 链
+     ├── initializeRemotingServer()       // 创建 NettyRemotingServer (TCP + FAST)
+     ├── initializeResources()            // 创建线程池队列
+     ├── registerProcessor()              // 注册请求处理器
+     ├── initializeScheduledTasks()       // 定时任务（水位线打印、注册 Broker 等）
+     ├── initialTransaction()             // 初始化事务消息服务
+     ├── initialRpcHooks()                // 加载 RPC Hook（SPI）
+     └── initialRequestPipeline()         // 构建认证鉴权管道
+```
+
+### PutMessageHook 链注册（:1030-1088）
+
+四个 Hook 按顺序在写入 CommitLog 前执行：
+
+| 顺序 | Hook 名称 | 功能 | 实现类 |
+|------|-----------|------|--------|
+| 1 | `checkBeforePutMessage` | 校验消息体大小、Topic 合法性 | `HookUtils.checkBeforePutMessage` |
+| 2 | `innerBatchChecker` | 检查内部批量消息 | `HookUtils.checkInnerBatch` |
+| 3 | `handleScheduleMessage` | 延迟/定时消息路由（4.x→SCHEDULE_TOPIC，5.x→TIMER_TOPIC） | `HookUtils.handleScheduleMessage` |
+| 4 | `handleLmqQuota` | LMQ 配额检查 | `HookUtils.handleLmqQuota` |
+
+### start() 启动流程（:1962）
+
+```mermaid
+flowchart TD
+    A["start()"] --> B["计算 shouldStartTime"]
+    A --> C["brokerOuterAPI.start()"]
+    A --> D["startBasicService()"]
+    D --> D1["messageStore.start()"]
+    D --> D2["timerMessageStore.start()"]
+    D --> D3["replicasManager.start()"]
+    D --> D4["remotingServer.start() × 2"]
+    D --> D5["popLongPollingService.start()"]
+    D --> D6["popBufferMergeService.start()"]
+    D --> D7["pullRequestHoldService.start()"]
+    D --> D8["clientHousekeepingService.start()"]
+    D --> D9["brokerFastFailure.start()"]
+    D --> D10["escapeBridge.start()"]
+    D --> D11["brokerPreOnlineService.start()"]
+    D --> D12["liteEventDispatcher.start()"]
+    A --> E["registerBrokerAll() 首次注册"]
+    A --> F["定时注册 每10-60s"]
+    A --> G["定时刷新元数据 每5s"]
+```
+
+### registerProcessor() 请求路由表（:1161-1308）
+
+| RequestCode | Processor | 线程池 |
+|-------------|-----------|--------|
+| SEND_MESSAGE / V2 / BATCH / CONSUMER_SEND_MSG_BACK | SendMessageProcessor | sendMessageExecutor |
+| RECALL_MESSAGE | RecallMessageProcessor | sendMessageExecutor |
+| PULL_MESSAGE / LITE_PULL_MESSAGE | PullMessageProcessor | pullMessageExecutor / litePullMessageExecutor |
+| PEEK_MESSAGE | PeekMessageProcessor | pullMessageExecutor |
+| POP_MESSAGE | PopMessageProcessor | pullMessageExecutor |
+| POP_LITE_MESSAGE | PopLiteMessageProcessor | pullMessageExecutor |
+| ACK_MESSAGE / BATCH_ACK_MESSAGE | AckMessageProcessor | ackMessageExecutor |
+| CHANGE_MESSAGE_INVISIBLETIME | ChangeInvisibleTimeProcessor | ackMessageExecutor |
+| NOTIFICATION | NotificationProcessor | pullMessageExecutor |
+| SEND_REPLY_MESSAGE / V2 | ReplyMessageProcessor | replyMessageExecutor |
+| QUERY_MESSAGE / VIEW_MESSAGE_BY_ID | QueryMessageProcessor | queryMessageExecutor |
+| HEART_BEAT / UNREGISTER_CLIENT / CHECK_CLIENT_CONFIG | ClientManageProcessor | heartbeatExecutor / clientManageExecutor |
+| GET_CONSUMER_LIST_BY_GROUP / UPDATE_CONSUMER_OFFSET / QUERY_CONSUMER_OFFSET | ConsumerManageProcessor | consumerManageExecutor |
+| QUERY_ASSIGNMENT / SET_MESSAGE_REQUEST_MODE | QueryAssignmentProcessor | loadBalanceExecutor |
+| END_TRANSACTION | EndTransactionProcessor | endTransactionExecutor |
+| GET_BROKER_LITE_INFO 等 6个 | LiteManagerProcessor | adminBrokerExecutor |
+| 其他所有（默认） | AdminBrokerProcessor | adminBrokerExecutor |
+
+---
+
+## 16.1 processor 子包 —— 请求处理器（25 类）
+
+这是 broker 最大的子包，每个 Processor 处理一种或多种 Remoting 请求。
+
+### 16.1.1 SendMessageProcessor（:735 行）
+
+处理 `SEND_MESSAGE`、`SEND_MESSAGE_V2`、`SEND_BATCH_MESSAGE`、`CONSUMER_SEND_MSG_BACK` 四种请求。
+
+**入口** `processRequest()`（:89）：
+```mermaid
+flowchart TD
+    A["processRequest(ctx, request)"] --> B{RequestCode?}
+    B -->|CONSUMER_SEND_MSG_BACK| C["consumerSendMsgBack()"]
+    B -->|其他| D["parseRequestHeader()"]
+    D --> E["buildTopicQueueMappingContext()"]
+    E --> F["executeSendMessageHookBefore()"]
+    F --> G{isBatch?}
+    G -->|Yes| H["sendBatchMessage()"]
+    G -->|No| I["sendMessage()"]
+```
+
+**sendMessage()** 核心流程（:243）：
+1. `preSend()` —— 校验 Topic 配置、权限、构建 `MessageExtBrokerInner`
+2. `handleRetryAndDLQ()` —— 处理重试消息（超过 maxReconsumeTimes → DLQ）
+3. 检查 `PROPERTY_TRANSACTION_PREPARED` → 事务消息走 `transactionalMessageService.asyncPrepareMessage()`
+4. 普通消息走 `messageStore.asyncPutMessage(msgInner)`
+5. 异步模式（默认）：`CompletableFuture.thenAcceptAsync()` → `handlePutMessageResult()` → `doResponse()`
+
+```java
+// SendMessageProcessor.java:341-347
+if (brokerController.getBrokerConfig().isAsyncSendEnable()) {
+    CompletableFuture<PutMessageResult> asyncPutMessageFuture;
+    if (sendTransactionPrepareMessage) {
+        asyncPutMessageFuture = this.brokerController.getTransactionalMessageService().asyncPrepareMessage(msgInner);
+    } else {
+        asyncPutMessageFuture = this.brokerController.getMessageStore().asyncPutMessage(msgInner);
+    }
+    asyncPutMessageFuture.thenAcceptAsync(putMessageResult -> {
+        handlePutMessageResult(...);
+        doResponse(ctx, request, responseFuture);
+    }, this.brokerController.getPutMessageFutureExecutor());
+    return null; // 释放发送线程
+}
+```
+
+**rejectRequest()**（:130）：Slave 且非 ActingMaster、PageCache 繁忙、TransientStorePool 不足时拒绝请求。
+
+### 16.1.2 PullMessageProcessor（:917 行）
+
+处理 `PULL_MESSAGE` 和 `LITE_PULL_MESSAGE` 请求，是消费侧最核心的处理器。
+
+**processRequest()**（:304）核心校验链：
+1. Broker 权限检查（`PermName.isReadable`）
+2. `SubscriptionGroupConfig` 存在性 & `consumeEnable` 检查
+3. `TopicConfig` 存在性 & 读权限
+4. `queueId` 范围校验
+5. 订阅数据校验（`hasSubscriptionFlag` → 从请求头构建，否则从 `ConsumerGroupInfo` 获取）
+6. SQL 表达式过滤校验（`ConsumerFilterData` 版本检查）
+
+**消息拉取核心**（:566）：
+```java
+messageStore.getMessageAsync(group, storeTopic, queueId, requestHeader.getQueueOffset(),
+        requestHeader.getMaxMsgNums(), messageFilter)
+    .thenApply(result -> pullMessageResultHandler.handle(...))
+    .thenAccept(result -> NettyRemotingAbstract.writeResponse(channel, request, result, null, ...));
+```
+
+**长轮询挂起**：当 `getMessageResult.getStatus() == NO_MATCHED_MESSAGE || NO_MESSAGE_IN_QUEUE` 时，通过 `PullRequestHoldService.suspendPullRequest()` 挂起请求，5 秒后检查或消息到达时唤醒。
+
+### 16.1.3 PopMessageProcessor（:1127 行）
+
+5.x 新增的 Pop 消费模式处理器，处理 `POP_MESSAGE` 请求。
+
+核心组件：
+- `PopLongPollingService` —— Pop 长轮询服务
+- `PopBufferMergeService` —— Pop 缓冲合并服务（加速 Ack）
+- `QueueLockManager` —— 队列锁管理器
+- `reviveTopic` —— 恢复主题（`rmq_sys_REVIVE_LOG_{clusterName}`）
+
+**processRequest()**（:290）流程：
+1. 校验 Topic、QueueId、SubscriptionGroupConfig
+2. 构建订阅数据（支持 TAG 和 SQL92 过滤）
+3. 若 `popConsumerKVServiceEnable`：走 `PopConsumerService.popAsync()` 异步路径
+4. 否则走 `popMsgFromQueue()` 同步路径
+
+**Pop 消费核心** `popMsgFromQueue()`（:677）：
+- 从 ConsumeQueue 拉取消息
+- 为每条消息生成 `PopCheckPoint`（记录 popTime、invisibleTime）
+- 设置消息的 `PROPERTY_POP_CK` 属性
+- Ack 后通过 `AckMessageProcessor` 处理
+
+### 16.1.4 AckMessageProcessor（:571 行）
+
+处理 `ACK_MESSAGE` 和 `BATCH_ACK_MESSAGE` 请求。
+
+核心逻辑：
+- 消费成功 → Ack → 更新 `PopCheckPoint` → 偏移量推进
+- 消费失败 → 不 Ack → invisibleTime 超时后 → `PopReviveService` 从 reviveTopic 恢复 → 重新投递
+
+**PopReviveService**：后台线程定时扫描 reviveTopic，将超时未 Ack 的 CheckPoint 重新投递到原始 Topic。
+
+### 16.1.5 EndTransactionProcessor（:372 行）
+
+处理 `END_TRANSACTION` 请求（Producer 提交/回滚事务）。
+
+```mermaid
+flowchart TD
+    A["EndTransaction request"] --> B{commitOrRollback?}
+    B -->|COMMIT_TYPE| C["commitMessage()"]
+    C --> D["endMessageTransaction()"]
+    D --> E["sendFinalMessage() 写入真实Topic"]
+    E --> F["deletePrepareMessage() 写入OP队列"]
+    B -->|ROLLBACK_TYPE| G["rollbackMessage()"]
+    G --> H["deletePrepareMessage() 写入OP队列"]
+```
+
+### 16.1.6 AdminBrokerProcessor（:3656 行）
+
+最大的单文件处理器，处理所有管理类请求（默认处理器）。通过 `processRequest()` 内的 switch-case 路由上百个 RequestCode：
+- `CREATE_TOPIC` / `DELETE_TOPIC` / `GET_TOPIC_STATS`
+- `GET_BROKER_CLUSTER_INFO` / `GET_BROKER_CONFIG`
+- `UPDATE_BROKER_CONFIG` / `SEARCH_OFFSET_BY_TIMESTAMP`
+- `GET_ALL_CONSUMER_OFFSET` / `GET_ALL_DELAY_OFFSET`
+- `BROKER_CLUSTER_HEARTBEAT`（向 Controller 发送心跳）
+- 等等
+
+### 16.1.7 其他 Processor 一览
+
+| Processor | RequestCode | 职责 |
+|-----------|-------------|------|
+| ClientManageProcessor | HEART_BEAT, UNREGISTER_CLIENT, CHECK_CLIENT_CONFIG | 客户端注册/注销/心跳 |
+| ConsumerManageProcessor | GET_CONSUMER_LIST_BY_GROUP, UPDATE/QUERY_CONSUMER_OFFSET | 消费组管理 |
+| QueryMessageProcessor | QUERY_MESSAGE, VIEW_MESSAGE_BY_ID | 消息查询 |
+| PeekMessageProcessor | PEEK_MESSAGE | 消息查看（不消费） |
+| ReplyMessageProcessor | SEND_REPLY_MESSAGE / V2 | 请求-应答模式回复 |
+| ChangeInvisibleTimeProcessor | CHANGE_MESSAGE_INVISIBLETIME | 修改 Pop 消费不可见时间 |
+| QueryAssignmentProcessor | QUERY_ASSIGNMENT, SET_MESSAGE_REQUEST_MODE | 5.x 消费负载分配 |
+| RecallMessageProcessor | RECALL_MESSAGE | 消息撤回（5.x新特性） |
+| NotificationProcessor | NOTIFICATION | Pop 消费通知 |
+| LiteManagerProcessor | GET_BROKER_LITE_INFO 等 | Lite 模式管理 |
+| LiteSubscriptionCtlProcessor | LITE_SUBSCRIPTION_CTL | Lite 订阅控制 |
+| PollingInfoProcessor | POLLING_INFO | 轮询信息 |
+| PopLiteMessageProcessor | POP_LITE_MESSAGE | Lite Pop 消费 |
+| PopInflightMessageCounter | — | Pop 在途消息计数器 |
+
+---
+
+## 16.2 transaction 子包 —— 事务消息（14 类）
+
+### 16.2.1 TransactionalMessageService（接口）
+
+定义事务消息核心接口：
+```java
+CompletableFuture<PutMessageResult> asyncPrepareMessage(MessageExtBrokerInner msg);
+PutMessageResult prepareMessage(MessageExtBrokerInner msg);
+void check(long transactionTimeout, int transactionCheckMax, AbstractTransactionalMessageCheckListener listener);
+OperationResult commitMessage(EndTransactionRequestHeader reqHeader);
+OperationResult rollbackMessage(EndTransactionRequestHeader reqHeader);
+```
+
+### 16.2.2 TransactionalMessageServiceImpl
+
+**半消息写入** `asyncPrepareMessage()`（:99）→ `transactionalMessageBridge.asyncPutHalfMessage()`
+
+**回查机制** `check()`（:162）：
+
+```mermaid
+flowchart TD
+    A["check(transactionTimeout, max, listener)"] --> B["获取 RMQ_SYS_TRANS_HALF_TOPIC 队列"]
+    B --> C["获取 OP 队列 RMQ_SYS_TRANS_OP_HALF_TOPIC"]
+    C --> D["fillOpRemoveMap() 拉取OP消息"]
+    D --> E["遍历半消息队列"]
+    E --> F{已处理?}
+    F -->|是| E
+    F -->|否| G{needDiscard? 超过max次}
+    G -->|是| H["listener.resolveDiscardMsg()"]
+    G -->|否| I{needSkip? 超过保留时间}
+    I -->|是| E
+    I -->|否| J{checkImmunityTime? 超时}
+    J -->|是| K["listener.resolveHalfMsg() 回查Producer"]
+    J -->|否| L["putBackHalfMsgQueue() 重新写入"]
+    L --> E
+```
+
+关键参数：
+- `MAX_PROCESS_TIME_LIMIT = 60000`（:61）单次回查最长 60 秒
+- `OP_MSG_PULL_NUMS = 32`（:66）每次拉取 OP 消息 32 条
+- `PROPERTY_TRANSACTION_CHECK_TIMES` 记录回查次数
+
+### 16.2.3 TransactionalMessageBridge
+
+**parseHalfMessageInner()**（:219）：将原始消息转为半消息
+```java
+// 保存真实 Topic/QueueId 到属性
+MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_REAL_TOPIC, msgInner.getTopic());
+MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_REAL_QUEUE_ID, ...);
+// 改写 Topic 为 RMQ_SYS_TRANS_HALF_TOPIC
+msgInner.setTopic(TransactionalMessageUtil.buildHalfTopic());
+msgInner.setQueueId(0);
+```
+
+**commitMessage()**（:634）：根据 `commitLogOffset` 从 CommitLog 查找半消息。
+**rollbackMessage()**（:639）：回滚即写入 OP 队列标记删除。
+
+### 16.2.4 其他事务组件
+
+| 类 | 职责 |
+|----|------|
+| `TransactionalMessageCheckService` | 定时触发回查（ServiceThread，默认 60s） |
+| `DefaultTransactionalMessageCheckListener` | 回查结果处理（发送回查请求给 Producer） |
+| `TransactionMetrics` | 事务消息计数器（每个真实 Topic 的半消息数量） |
+| `TransactionMetricsFlushService` | 定时刷盘事务计数 |
+| `TransactionalOpBatchService` | 批量写入 OP 队列 |
+| `TransactionalMessageRocksDBService` | RocksDB 存储事务状态（5.x 可选） |
+| `MessageQueueOpContext` | OP 队列操作上下文（批量删除优化） |
+
+---
+
+## 16.3 schedule 子包 —— 4.x 延迟消息（2 类）
+
+### 16.3.1 ScheduleMessageService
+
+继承 `ConfigManager`，管理 18 个固定延迟级别的消息调度。
+
+**延迟级别解析** `parseDelayLevel()`（:300）：
+```java
+// messageDelayLevel = "1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h"
+String[] levelArray = levelString.split(" ");
+for (int i = 0; i < levelArray.length; i++) {
+    String ch = value.substring(value.length() - 1);  // s/m/h/d
+    Long tu = timeUnitTable.get(ch);                   // 1000/60000/...
+    long num = Long.parseLong(value.substring(0, value.length() - 1));
+    delayLevelTable.put(level, tu * num);              // level → delayTimeMillis
+}
+```
+
+**核心数据结构**：
+```java
+ConcurrentSkipListMap<Integer, Long> delayLevelTable;  // level → 延迟毫秒数
+ConcurrentMap<Integer, Long> offsetTable;              // level → ConsumeQueue 消费进度
+```
+
+**消息到期投递** `messageTimeUp()`（:334）：
+```java
+// 清除延迟属性
+MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_DELAY_TIME_LEVEL);
+// 恢复真实 Topic
+msgInner.setTopic(msgInner.getProperty(MessageConst.PROPERTY_REAL_TOPIC));
+msgInner.setQueueId(Integer.parseInt(msgInner.getProperty(MessageConst.PROPERTY_REAL_QUEUE_ID)));
+```
+
+**DeliverDelayedMessageTimerTask**（:366）：
+1. 从 `SCHEDULE_TOPIC` 的对应 queueId 读取 ConsumeQueue
+2. 遍历消息，检查 `correctDeliverTimestamp`
+3. 到期 → `messageTimeUp()` → `asyncPutMessage()` 写回真实 Topic
+4. 未到期 → `scheduleNextTimerTask()` 重新调度
+
+```mermaid
+flowchart LR
+    A["Producer 发送延迟消息"] --> B["HookUtils.handleScheduleMessage"]
+    B --> C["改写Topic为SCHEDULE_TOPIC\n改写QueueId为delayLevel-1"]
+    C --> D["CommitLog存储"]
+    D --> E["DeliverDelayedMessageTimerTask 定时扫描"]
+    E --> F{到期?}
+    F -->|否| E
+    F -->|是| G["messageTimeUp() 恢复真实Topic"]
+    G --> H["重新写入CommitLog"]
+    H --> I["消费者正常消费"]
+```
+
+**queueId 与 delayLevel 的映射**：
+```java
+public static int queueId2DelayLevel(final int queueId) { return queueId + 1; }
+public static int delayLevel2QueueId(final int delayLevel) { return delayLevel - 1; }
+```
+
+---
+
+## 16.4 pop 子包 —— Pop 消费模式（10 类）
+
+Pop 消费是 5.x 引入的轻量消费模式，消费者不需要 Rebalance，由 Broker 分配消息。
+
+### 16.4.1 核心组件
+
+| 类 | 职责 |
+|----|------|
+| `PopConsumerService` | Pop 消费主服务，管理 KV 存储 |
+| `PopConsumerCache` | Pop 消费内存缓存 |
+| `PopConsumerContext` | Pop 消费上下文 |
+| `PopConsumerKVStore` | Pop 消费 KV 存储接口 |
+| `PopConsumerRocksdbStore` | RocksDB 实现 |
+| `PopConsumerRecord` | Pop 消费记录 |
+| `PopConsumerLockService` | Pop 消费锁服务 |
+
+### 16.4.2 Pop 消费流程
+
+```mermaid
+sequenceDiagram
+    participant Consumer
+    participant PopMessageProcessor
+    participant PopConsumerService
+    participant MessageStore
+    participant AckMessageProcessor
+    participant PopReviveService
+
+    Consumer->>PopMessageProcessor: POP_MESSAGE(invisibleTime)
+    PopMessageProcessor->>PopConsumerService: popAsync(topic, group, queueId, maxNums)
+    PopConsumerService->>MessageStore: getMessage(offset, maxNums)
+    MessageStore-->>PopConsumerService: 消息列表
+    PopConsumerService->>PopConsumerService: 生成 PopCheckPoint(popTime, invisibleTime)
+    PopConsumerService-->>PopMessageProcessor: PopConsumerContext
+    PopMessageProcessor-->>Consumer: 消息列表 + ck属性
+
+    alt 消费成功
+        Consumer->>AckMessageProcessor: ACK_MESSAGE(ck)
+        AckMessageProcessor->>AckMessageProcessor: 更新PopCheckPoint
+        AckMessageProcessor->>AckMessageProcessor: 推进消费进度
+    else 消费失败/超时
+        PopReviveService->>AckMessageProcessor: 扫描reviveTopic
+        AckMessageProcessor->>MessageStore: 重新投递消息
+    end
+```
+
+### 16.4.3 PopConsumerService 深入分析
+
+`PopConsumerService`（继承 ServiceThread）是 5.5.0 引入的新一代 Pop 消费引擎，基于 RocksDB KV Store 管理 Pop 状态。
+
+**重试退避间隔**（PopConsumerService.java:77-78）：
+```java
+int[] REWRITE_INTERVALS_IN_SECONDS = {10, 30, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 1200, 1800, 3600, 7200};
+```
+共 16 级退避，从 10 秒逐步增长到 2 小时。
+
+**popAsync() 核心逻辑**（:355）：
+1. `consumerLockService.tryLock()` -- 加消费组锁
+2. 构建 `PopConsumerContext`
+3. **优先级模式**：`PRIORITY` 类型 Topic 且非 FIFO -> 按 `priorityFactor` 比例优先拉取重试 Topic
+4. **概率重试**：`probability = popFromRetryProbability`，按概率决定是否优先拉取重试消息
+5. 拉取顺序：
+   ```
+   preferRetry=true:  retryTopicV1 -> retryTopicV2 -> 原始Topic
+   preferRetry=false: 原始Topic -> retryTopicV1 -> retryTopicV2
+   ```
+6. `getMessageAsync()` 从 ConsumeQueue 拉取消息 -> 生成 `PopConsumerRecord` -> 写入 RocksDB KV Store
+
+**双路径 Ack**（AckMessageProcessor.java:165-168）：
+```java
+if (brokerController.getBrokerConfig().isPopConsumerKVServiceEnable()) {
+    appendAckNew(requestHeader, ...);  // 新路径：RocksDB KV Store
+} else {
+    appendAck(requestHeader, ...);     // 旧路径：PopBufferMergeService
+}
+```
+
+### 16.4.4 PopCheckPoint 数据结构（store 模块）
+
+```java
+public class PopCheckPoint {
+    private String topic;
+    private String consumerGroup;
+    private int queueId;
+    private long startOffset;
+    private long popTime;
+    private long invisibleTime;
+    private long ackOffset;       // -1 表示未 Ack
+    private int queueIdDiff;
+    private long msgTime;
+    // ...
+}
+```
+
+### 16.4.5 Pop 消费 vs 传统 Pull 消费
+
+| 特性 | Pull 消费 | Pop 消费 |
+|------|-----------|----------|
+| Rebalance | 需要（RebalanceService 20s） | 不需要 |
+| 消费进度 | ConsumeQueue offset | PopCheckPoint + Ack |
+| 消费失败 | 重试 Topic | invisibleTime 超时自动重投 |
+| 并发 | 固定 Queue 分配 | 动态分配 |
+| 资源占用 | 高（需维护 Queue 分配） | 低 |
+
+### 16.4.6 PopBufferMergeService 内部数据结构深入分析
+
+`PopBufferMergeService`（processor 子包，:47）是 Pop 消费的**内存缓冲合并层**，在 Ack 消息落盘前完成 CK/Ack 合并，避免每条消息都走 revive topic 持久化路径。
+
+#### 核心数据结构（PopBufferMergeService.java:49-52）
+
+```java
+// 1. CK 缓冲表：mergeKey -> PopCheckPointWrapper
+ConcurrentHashMap<String, PopCheckPointWrapper> buffer = new ConcurrentHashMap<>(1024 * 16);
+// 2. 偏移量提交队列：topic@cid@queueId -> QueueWithTime<PopCheckPointWrapper>
+ConcurrentHashMap<String, QueueWithTime<PopCheckPointWrapper>> commitOffsets = new ConcurrentHashMap<>();
+```
+
+- `buffer`：保存所有未完成的 PopCheckPoint，key 为 `mergeKey`（topic+cid+queueId+startOffset+popTime+brokerName 拼接）
+- `commitOffsets`：按 `lockKey`（topic@cid@queueId）分组的双端队列，用于推进消费偏移量
+
+#### PopCheckPointWrapper 内部类（:843-869）
+
+```java
+public class PopCheckPointWrapper {
+    private final int reviveQueueId;
+    private volatile long reviveQueueOffset;  // -1:未存储, >=0:已存储, Long.MAX:存储中
+    private final PopCheckPoint ck;
+    private final AtomicInteger bits;          // 并发 Ack 位图（每位对应一条消息）
+    private final AtomicInteger toStoreBits;   // 已落盘 Ack 位图
+    private final long nextBeginOffset;
+    private final String lockKey;              // topic@cid@queueId
+    private final String mergeKey;             // topic+cid+queueId+startOffset+popTime+brokerName
+    private final boolean justOffset;         // true:仅推进偏移量,不缓冲 Ack
+    private volatile boolean ckStored = false; // CK 是否已写入 revive topic
+}
+```
+
+**双位图机制**：`bits` 记录哪些消息已被 Ack（通过 `markBitCAS` 原子设置，:575/583），`toStoreBits` 记录哪些 Ack 已落盘。两者配合判断 CK 是否完成。
+
+#### scan() 扫描逻辑（:226-329）
+
+每 5ms 执行一次（interval=5），遍历 `buffer`：
+
+1. **跳过不存在的消费组**（:236）：`isSubscriptionGroupNotExist()` -> `iterator.remove()`
+2. **CK 完成判断**（:249）：
+   - `isJustOffset() && isCkStored()` -> 仅偏移量模式且已存储
+   - `isCkDone(pointWrapper)` -> 所有消息已 Ack
+   - `isCkDoneForFinish() && isCkStored()` -> Ack 已全部落盘
+3. **超时处理**（:264-271）：
+   - `reviveTime - now < popCkStayBufferTimeOut` -> CK 即将超时
+   - `now - popTime > popCkStayBufferTime` -> 停留过久
+   - 触发 `removeCk=true` -> 将缓冲 Ack 批量落盘
+4. **批量 Ack 落盘**（:298-322）：`enablePopBatchAck` 时收集 `bits` 已设但 `toStoreBits` 未设的索引，调用 `putBatchAckToStore()` 一次性写入
+
+#### 位图完成判断（:800-819）
+
+```java
+// isCkDone: 检查 bits 中所有 num 位是否为 1
+private boolean isCkDone(PopCheckPointWrapper pointWrapper) {
+    byte num = pointWrapper.getCk().getNum();
+    for (byte i = 0; i < num; i++) {
+        if (!DataConverter.getBit(pointWrapper.getBits().get(), i)) return false;
+    }
+    return true;
+}
+
+// isCkDoneForFinish: bits ^ toStoreBits == 0（所有已 Ack 都已落盘）
+private boolean isCkDoneForFinish(PopCheckPointWrapper pointWrapper) {
+    int bits = pointWrapper.getBits().get() ^ pointWrapper.getToStoreBits().get();
+    for (byte i = 0; i < num; i++) {
+        if (DataConverter.getBit(bits, i)) return false;
+    }
+    return true;
+}
+```
+
+#### addAk() Ack 处理（:534-605）
+
+1. 从 `buffer` 按 mergeKey 查找 `PopCheckPointWrapper`
+2. 超时检查：`reviveTime - now < popCkStayBufferTimeOut + 1500` -> 拒绝（即将超时）
+3. 停留检查：`now - popTime > popCkStayBufferTime - 1500` -> 拒绝（停留过久）
+4. `markBitCAS(bits, indexOfAck)` 原子标记 Ack 位（:575/583）
+5. 支持 `BatchAckMsg` 批量 Ack
+
+#### scanCommitOffset() 偏移量推进（:136-149）
+
+遍历 `commitOffsets` 队列，对每个 `PopCheckPointWrapper` 判断：
+- `justOffset && ckStored` -> 调用 `commitOffset()` 推进
+- `isCkDone` -> 推进
+- `isCkDoneForFinish && ckStored` -> 推进
+
+`commitOffset()`（:387）调用 `PopMessageProcessor.addCk()` 更新内存偏移量。
+
+```mermaid
+flowchart TD
+    A[Pop 消息拉取] --> B[addCk: 写入 buffer<br/>写入 commitOffsets]
+    C[Consumer Ack] --> D[addAk: markBitCAS<br/>设置 bits 位]
+    E[scan 5ms 循环] --> F{isCkDone?}
+    F -->|是| G[commitOffset: 推进偏移量<br/>从 buffer 移除]
+    F -->|否| H{超时?}
+    H -->|是| I[putCkToStore: 写入 revive topic<br/>putAckToStore: 落盘 Ack]
+    H -->|否| J[继续缓冲]
+    I --> K[isCkDoneForFinish?<br/>bits XOR toStoreBits = 0]
+    K -->|是| L[commitOffset + 移除]
+```
+
+---
+
+### 16.4.7 orderly 子包 —— Pop 顺序消费
+
+| 类 | 职责 |
+|----|------|
+| `ConsumerOrderInfoManager` | 顺序消费控制接口（顶层抽象，支持队列级和消息组级顺序消费） |
+| `QueueLevelConsumerManager` | 队列级消费者管理（管理每个 Queue 的消费者） |
+| `QueueLevelConsumerOrderInfoLockManager` | 顺序消费锁管理器（基于 Queue 级别加锁） |
+
+---
+
+## 16.5 longpolling 子包 —— 长轮询（12 类）
+
+### 16.5.1 PullRequestHoldService
+
+**挂起 Pull 请求** `suspendPullRequest()`（:45）：
+```java
+String key = topic + "@" + queueId;
+ManyPullRequest mpr = pullRequestTable.get(key);
+mpr.addPullRequest(pullRequest);  // 添加到挂起列表
+```
+
+**定时检查** `run()`（:69）：
+```java
+while (!isStopped()) {
+    if (longPollingEnable) {
+        waitForRunning(5 * 1000);  // 长轮询：5秒
+    } else {
+        waitForRunning(shortPollingTimeMills);  // 短轮询：默认 1秒
+    }
+    checkHoldRequest();  // 检查所有挂起请求
+}
+```
+
+**消息到达通知** `notifyMessageArriving()`（:119）：
+1. 检查 `maxOffset > pullFromThisOffset`（有新消息）
+2. 检查过滤器匹配（Tag/SQL92）
+3. 匹配 → `executeRequestWhenWakeup()` 重新触发 Pull 请求
+
+### 16.5.2 PopLongPollingService
+
+Pop 消费的长轮询服务，使用 `Cache<String, ConcurrentSkipListSet<PopRequest>>` 管理挂起请求。
+
+### 16.5.3 其他长轮询组件
+
+| 类 | 职责 |
+|----|------|
+| `PullRequest` | 挂起的 Pull 请求封装 |
+| `ManyPullRequest` | 多个 Pull 请求的容器 |
+| `PopRequest` | 挂起的 Pop 请求封装 |
+| `PopLiteLongPollingService` | Lite Pop 长轮询 |
+| `LmqPullRequestHoldService` | LMQ 长轮询（继承 PullRequestHoldService） |
+| `NotifyMessageArrivingListener` | 消息到达监听器接口 |
+| `PollingHeader` / `PollingResult` | 轮询头部/结果 |
+| `PopCommandCallback` | Pop 命令回调 |
+
+---
+
+## 16.6 topic 子包 —— Topic 配置管理（5 类）
+
+### 16.6.1 TopicConfigManager
+
+管理 Broker 上所有 Topic 的配置。
+
+**核心数据结构**：
+```java
+ConcurrentMap<String, TopicConfig> topicConfigTable;  // Topic → 配置
+DataVersion dataVersion;                              // 版本号
+```
+
+**TopicConfig 字段**：
+```java
+String topicName;
+int readQueueNums;    // 读队列数
+int writeQueueNums;   // 写队列数
+int perm;             // 权限 (2=写, 4=读, 6=读写)
+int topicSysFlag;     // 系统标志
+TopicMessageType messageType;  // 普通事务延迟等
+Map<String, String> attributes;  // 属性
+```
+
+**关键方法**：
+- `createTopicInSendMessageMethod()` —— 发送时自动创建 Topic（如果 `autoCreateTopicEnable=true`）
+- `createTopicInSendMessageBackMethod()` —— DLQ Topic 创建
+- `selectTopicConfig()` —— 查询 Topic 配置
+- `deleteTopicConfig()` —— 删除 Topic 配置
+- `isTopicConfigChanged()` —— 检查版本变化
+
+### 16.6.2 其他 Topic 管理类
+
+| 类 | 职责 |
+|----|------|
+| `TopicQueueMappingManager` | 静态 Topic 队列映射（跨 Broker 逻辑队列） |
+| `TopicRouteInfoManager` | Topic 路由信息管理（向 NameServer 查询） |
+| `TopicQueueMappingCleanService` | 静态 Topic 映射清理 |
+| `TopicQueueMappingManager` | 队列映射详情管理 |
+
+---
+
+## 16.7 offset 子包 —— 消费偏移量管理（5 类）
+
+### 16.7.1 ConsumerOffsetManager
+
+**核心数据结构**（:48-55）：
+```java
+// 正式偏移表：topic@group → {queueId → offset}
+ConcurrentMap<String, ConcurrentMap<Integer, Long>> offsetTable;
+
+// 重置偏移表（用于 RESET_OFFSET 命令）
+ConcurrentMap<String, ConcurrentMap<Integer, Long>> resetOffsetTable;
+
+// 拉取偏移表（Pull 消费实时进度，用于 broadcast 模式）
+ConcurrentMap<String, ConcurrentMap<Integer, Long>> pullOffsetTable;
+```
+
+**关键方法**：
+- `commitOffset()` —— Consumer 提交消费进度
+- `queryOffset()` —— 查询消费进度
+- `hasOffsetReset()` —— 检查是否有重置请求
+- `persist()` —— 持久化到 JSON 文件 `{storePath}/config/consumerOffset.json`
+
+### 16.7.2 BroadcastOffsetManager / BroadcastOffsetStore
+
+管理广播模式消费偏移量：
+- `BroadcastOffsetStore` —— 每个 Topic@Group 维护广播偏移
+- `BroadcastOffsetManager` —— 管理多个 BroadcastOffsetStore
+
+### 16.7.3 LmqConsumerOffsetManager
+
+继承 ConsumerOffsetManager，支持 LMQ（轻量消息队列）的偏移量隔离管理。
+
+### 16.7.4 MemoryConsumerOrderInfoManager
+
+内存中的消费顺序信息管理器，用于 Pop 顺序消费。
+
+---
+
+## 16.8 subscription 子包 —— 订阅组管理（2 类）
+
+### 16.8.1 SubscriptionGroupManager
+
+管理消费组配置。
+
+**核心数据结构**：
+```java
+ConcurrentMap<String, SubscriptionGroupConfig> subscriptionGroupTable;
+ConcurrentMap<String, ConcurrentMap<String, Integer>> forbiddenTable;  // group → {topic → perm}
+```
+
+**SubscriptionGroupConfig 关键字段**：
+```java
+String groupName;
+boolean consumeEnable = true;       // 是否允许消费
+boolean consumeFromMinOffset = false; // 是否从最小偏移开始
+boolean consumeBroadcastEnable = true; // 广播消费
+int retryQueueNums = 1;              // 重试队列数
+int retryMaxTimes = 16;             // 最大重试次数
+int maxRetryTimesInQueue = 5;       // 队列内最大重试
+long brokerId = MixAll.MASTER_ID;   // 指定消费的 Broker
+boolean groupSysFlag = 0;            // 系统标志
+```
+
+**初始化** `init()`（:76）：注册内置消费组（TOOLS_CONSUMER_GROUP、FILTERSRV_CONSUMER_GROUP、SELF_TEST_C_GROUP 等）。
+
+### 16.8.2 LmqSubscriptionGroupManager
+
+继承 SubscriptionGroupManager，支持 LMQ 消费组隔离。
+
+---
+
+## 16.9 client 子包 —— 客户端连接管理（13 类）
+
+### 16.9.1 ConsumerManager
+
+管理 Consumer 客户端连接和消费组信息。
+
+**核心数据结构**：
+```java
+ConcurrentMap<String, ConsumerGroupInfo> consumerTable;      // group → 消费组信息
+ConcurrentMap<String, Set<String>> topicGroupTable;          // topic → {group}
+ConcurrentMap<String, ConsumerGroupInfo> consumerCompensationTable;  // 补偿表
+List<ConsumerIdsChangeListener> consumerIdsChangeListenerList;      // 变更监听器
+```
+
+**关键方法**：
+- `registerConsumer()` —— 注册 Consumer（心跳时调用）
+- `unregisterConsumer()` —— 注销 Consumer
+- `findConsumerIdList()` —— 获取消费组下所有 ClientId
+- `findSubscriptionData()` —— 获取订阅数据
+- `doChannelCloseEvent()` —— Channel 断开时清理
+- `compensateBasicConsumerInfo()` —— 补偿消费信息（对未注册的组自动创建默认配置）
+
+### 16.9.2 ConsumerGroupInfo
+
+```java
+String groupName;
+ConcurrentMap<Channel, ClientChannelInfo> channelInfoTable;  // 连接信息
+ConsumeType consumeType;        // CONSUME_ACTIVELY / CONSUME_PASSIVELY
+MessageModel messageModel;      // CLUSTERING / BROADCASTING
+ConsumeFromWhere consumeFromWhere;
+ConcurrentMap<String, SubscriptionData> subscriptionTable;  // 订阅数据
+```
+
+### 16.9.3 ProducerManager
+
+管理 Producer 客户端连接。
+
+```java
+ConcurrentMap<String/*group*/, ClientChannelInfo> groupChannelTable;
+ConcurrentMap<String/*group*/, Set<Channel>> channelMap;  // group → channels
+```
+
+**心跳机制**：Producer 心跳时更新 `lastUpdateTimestamp`，超时（默认 120s）的 Channel 会被清理。
+
+### 16.9.4 ClientHousekeepingService
+
+定时扫描过期的客户端连接（每 5s 执行一次）：
+```java
+// 遍历所有 Consumer 和 Producer
+consumerManager.doChannelCloseEvent();
+producerManager.doChannelCloseEvent();
+// 清理超时的 Channel
+```
+
+### 16.9.5 Broker2Client
+
+Broker 主动向客户端推送：
+- `callClient()` —— 向特定 Consumer 发送请求（如 RESET_OFFSET）
+- `notifyConsumerIdsChanged()` —— 通知消费组成员变化
+
+### 16.9.6 net 子包 —— Broker2Client
+
+`Broker2Client` 类，封装 Broker → Client 的 RPC 调用。
+
+### 16.9.7 rebalance 子包 —— RebalanceLockManager
+
+```java
+// 锁表：topic@queueId → {consumerId → lockTime}
+ConcurrentMap<String, ConcurrentMap<String, Long>> mqLockTable;
+```
+
+**关键方法**：
+- `tryLockBatch()` —— 批量加锁（顺序消费时锁定 MessageQueue）
+- `unlockBatch()` —— 批量解锁
+- `isLockAllExpired()` —— 检查所有锁是否过期
+
+---
+
+## 16.10 filter 子包 —— 消息过滤（6 类）
+
+### 16.10.1 ConsumerFilterManager
+
+管理 SQL92 表达式过滤数据。
+
+**核心数据结构**：
+```java
+ConcurrentMap<String/*Topic*/, FilterDataMapByTopic> filterDataByTopic;
+BloomFilter bloomFilter;  // 布隆过滤器
+```
+
+**ConsumerFilterData**：
+```java
+String topic;
+String consumerGroup;
+String expression;        // SQL92 表达式
+String expressionType;   // TAG / SQL92
+long clientVersion;      // 客户端版本
+long bornTime;
+BloomFilterData bloomFilterData;  // 布隆过滤数据
+```
+
+### 16.10.2 ExpressionMessageFilter
+
+消息过滤器实现，在 Pull/Pop 时过滤消息：
+```java
+public boolean isMatchedByConsumeQueue(Long tagsCode, ConsumeQueueExt.CqUnit extUnit) {
+    // 1. Tag 过滤：比较 tagsCode
+    // 2. Bloom 过滤：布隆过滤器初筛
+    // 3. 返回是否可能匹配
+}
+
+public boolean isMatchedByCommitLog(ByteBuffer msgBuffer, Map<String, String> properties) {
+    // 精确匹配：用 SQL92 表达式评估消息属性
+}
+```
+
+### 16.10.3 其他过滤组件
+
+| 类 | 职责 |
+|----|------|
+| `CommitLogDispatcherCalcBitMap` | CommitLog 分发时计算 BloomFilter 位图 |
+| `MessageEvaluationContext` | 表达式评估上下文 |
+| `ConsumerFilterData` | 消费者过滤数据 |
+| `FilterDataMapByTopic` | Topic 级别过滤数据 |
+
+---
+
+## 16.11 config 子包 —— 配置管理（17 类）
+
+### 16.11.1 BrokerConfig（common 模块）
+
+Broker 全局配置，继承 `BrokerIdentity`。关键字段（:28-80）：
+
+```java
+int listenPort = 6888;                    // 监听端口（5.x 默认改为6888）
+String brokerIP1, brokerIP2;              // Broker IP
+boolean autoCreateTopicEnable = true;     // 自动创建Topic
+boolean autoCreateSubscriptionGroup = true; // 自动创建消费组
+int sendMessageThreadPoolNums = min(4, cores); // 发送线程池
+int pullMessageThreadPoolNums = 16 + cores * 2; // 拉取线程池
+int ackMessageThreadPoolNums = 16;        // Ack线程池
+long waitTimeMillsInSendQueue = 200;      // 发送队列等待时间
+long waitTimeMillsInPullQueue = 5000;     // 拉取队列等待时间
+boolean enableControllerMode = false;     // Controller模式
+boolean enableSlaveActingMaster = false;  // Slave代理Master
+int brokerHeartbeatInterval = 1000;       // 心跳间隔
+```
+
+### 16.11.2 config/v1 子包 —— RocksDB 配置管理
+
+| 类 | 职责 |
+|----|------|
+| `RocksDBTopicConfigManager` | RocksDB 存储 Topic 配置 |
+| `RocksDBSubscriptionGroupManager` | RocksDB 存储消费组配置 |
+| `RocksDBConsumerOffsetManager` | RocksDB 存储消费偏移 |
+| `RocksDBLmqTopicConfigManager` | LMQ Topic 配置 |
+| `RocksDBLmqSubscriptionGroupManager` | LMQ 消费组配置 |
+
+### 16.11.3 config/v2 子包 —— 新版配置管理
+
+| 类 | 职责 |
+|----|------|
+| `ConfigStorage` | RocksDB 配置存储引擎 |
+| `TopicConfigManagerV2` | 新版 Topic 配置管理 |
+| `SubscriptionGroupManagerV2` | 新版消费组配置管理 |
+| `ConsumerOffsetManagerV2` | 新版偏移量管理 |
+
+**演进**：从 JSON 文件 → RocksDB 存储，大幅提升大量 Topic/Group 场景下的启动速度和配置管理效率。
+
+---
+
+## 16.12 controller 子包 —— Controller 模式（1 类）
+
+### 16.12.1 ReplicasManager
+
+5.x Controller 模式下的副本管理器，管理 Master 选举和副本同步。
+
+**状态机**（:84-86）：
+```java
+volatile State state = State.INITIAL;  // INITIAL → FENCED → FOLLOWING / LEADING
+volatile RegisterState registerState = RegisterState.INITIAL;
+```
+
+**核心职责**（类注释 :62-66）：
+1. **定时同步 Controller 元数据** —— 获取 Controller Leader 地址
+2. **定时同步 Broker 角色** —— 根据 Controller 指令变更 Master/Slave 角色
+3. **定时扩展/收缩 SyncStateSet** —— 仅 Master 执行
+
+**关键方法**：
+- `start()` —— 启动定时任务（心跳、元数据同步、SyncStateSet 检查）
+- `sendHeartbeatToController()` —— 向 Controller 发送心跳
+- `registerBrokerToController()` —— 向 Controller 注册 Broker
+- `changeBrokerRole()` —— 变更 Broker 角色（Master/Slave 切换）
+- `maintainSyncStateSet()` —— 维护同步副本集
+
+**与 AutoSwitchHAService 协作**：ReplicasManager 变更角色后，通知 `AutoSwitchHAService` 切换 HA 主从关系。
+
+---
+
+## 16.13 dledger 子包 —— DLedger 集成（1 类）
+
+### 16.13.1 DLedgerRoleChangeHandler
+
+处理 DLedger 角色变更事件，将 DLedger Leader 选举结果映射到 Broker Master/Slave 角色。
+
+```java
+// 实现 DLedgerRoleChangeHandler 接口
+handleRoleChange(RoleChangeEnum roleChangeEnum, String leaderId) {
+    // leaderId == 本 Broker → 切换为 Master
+    // leaderId != 本 Broker → 切换为 Slave
+}
+```
+
+---
+
+## 16.14 failover 子包 —— 故障转移（1 类）
+
+### 16.14.1 EscapeBridge
+
+Broker 故障转移桥梁，在 Broker 不可用时将消息转移到其他 Broker。
+
+**关键方法**：
+- `start()` —— Start async sender executor (enableSlaveActingMaster && enableRemoteEscape)
+- `putMessage()` —— Sync forward message to target Broker
+- `asyncPutMessage()` —— Async forward message (CompletableFuture)
+- `pullMessage()` —— Pull message from remote Broker
+
+---
+
+## 16.15 latency 子包 —— 延迟与快速失败（1 类）
+
+### 16.15.1 BrokerFastFailure
+
+监控线程池队列，自动拒绝过期请求，防止 Broker 雪崩。
+
+**初始化清理队列列表**（:58-66）：
+```java
+cleanExpiredRequestQueueList.add(Pair.of(sendThreadPoolQueue, () -> waitTimeMillsInSendQueue));
+cleanExpiredRequestQueueList.add(Pair.of(pullThreadPoolQueue, () -> waitTimeMillsInPullQueue));
+cleanExpiredRequestQueueList.add(Pair.of(litePullThreadPoolQueue, () -> waitTimeMillsInLitePullQueue));
+cleanExpiredRequestQueueList.add(Pair.of(heartbeatThreadPoolQueue, () -> waitTimeMillsInHeartbeatQueue));
+cleanExpiredRequestQueueList.add(Pair.of(endTransactionThreadPoolQueue, () -> waitTimeMillsInTransactionQueue));
+cleanExpiredRequestQueueList.add(Pair.of(ackThreadPoolQueue, () -> waitTimeMillsInAckQueue));
+cleanExpiredRequestQueueList.add(Pair.of(adminBrokerThreadPoolQueue, () -> waitTimeMillsInAdminBrokerQueue));
+```
+
+**清理逻辑**：定时（默认 1s）扫描队列头部请求，如果等待时间超过阈值 → 立即返回 `SystemBusy` 错误。
+
+---
+
+## 16.16 pagecache 子包 —— 页缓存监控（3 类）
+
+### 16.16.1 PageCacheStatService
+
+监控操作系统 Page Cache 状态：
+- 定时采集 `/proc/meminfo`（Linux）获取 Page Cache 使用量
+- 判断 Page Cache 是否繁忙（`isOSPageCacheBusy`）
+- 为 `BrokerFastFailure` 提供决策依据
+
+---
+
+## 16.17 plugin 子包 —— 插件机制（2 类）
+
+### 16.17.1 BrokerAttachedPlugin
+
+Broker 附加插件接口：
+```java
+public abstract class BrokerAttachedPlugin {
+    public abstract String getName();
+    public abstract boolean load();
+    public abstract void start();
+    public abstract void shutdown();
+}
+```
+
+在 `BrokerController` 中通过 `brokerAttachedPlugins` 列表管理，在 `startBasicService()` 中统一启动。
+
+---
+
+## 16.18 util 子包 —— 工具类（2 类）
+
+### 16.18.1 HookUtils
+
+Broker 核心 Hook 工具类，包含：
+
+| 方法 | 功能 | 调用位置 |
+|------|------|----------|
+| `checkBeforePutMessage()` | 消息体大小、Topic 合法性校验 | PutMessageHook #1 |
+| `checkInnerBatch()` | 内部批量消息检查 | PutMessageHook #2 |
+| `handleScheduleMessage()` | 延迟/定时消息路由 | PutMessageHook #3 |
+| `handleLmqQuota()` | LMQ 配额检查 | PutMessageHook #4 |
+| `sendMessageBack()` | 消息重试发送回调 | SendMessageBackHook |
+
+**handleScheduleMessage 路由逻辑**（:220-247）：
+```java
+// 5.x 定时消息（任意延迟时间）
+if (msgInner.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) != null) {
+    return HookUtils.handleScheduleAndTimerMessage(brokerController, msgInner);
+}
+// 4.x 延迟消息（固定级别）
+if (msgInner.getDelayTimeLevel() > 0) {
+    return HookUtils.transformDelayLevelMessage(brokerController, msgInner);
+}
+```
+
+---
+
+## 16.19 out 子包 —— 外部通信（1 类）
+
+### 16.19.1 BrokerOuterAPI
+
+Broker 对外通信客户端，封装与 NameServer 和其他 Broker 的 RPC：
+- `registerBrokerAll()` —— 向所有 NameServer 注册 Broker
+- `unRegisterBroker()` —— 注销 Broker
+- `getTopicRouteInfoFromNameServer()` —— 查询 Topic 路由
+- `sendHeartbeatToController()` —— 向 Controller 发送心跳
+
+---
+
+## 16.20 slave 子包 —— 从节点同步（1 类）
+
+### 16.20.1 SlaveSynchronize
+
+Slave 节点定时同步 Master 的配置数据：
+```java
+// SlaveSynchronize.syncAll() (:65)
+syncTopicConfig();              // 同步 Topic 配置
+syncConsumerOffset();           // 同步消费偏移量
+syncDelayOffset();              // 同步延迟消息偏移量
+syncSubscriptionGroupConfig(); // 同步消费组配置
+syncMessageRequestMode();       // 同步消息请求模式 (Pop/Pull)
+if (timerWheelEnable) {
+    syncTimerMetrics();         // 同步时间轮指标
+}
+```
+
+同步方式：通过 HTTP 从 Master 拉取 JSON 配置文件。
+
+---
+
+## 16.21 metrics 子包 —— 指标监控（11 类）
+
+### 16.21.1 BrokerMetricsManager
+
+基于 OpenTelemetry 的指标采集管理器。metrics 子包共 11 个类：
+
+| 类 | 职责 |
+|----|------|
+| `BrokerMetricsManager` | Broker 指标管理器（核心） |
+| `PopMetricsManager` | Pop 消费指标管理器 |
+| `BrokerMetricsConstant` | 指标常量定义（LABEL_TOPIC 等） |
+| `PopMetricsConstant` | Pop 指标常量 |
+| `ConsumerLagCalculator` | 消费滞后计算器 |
+| `LiteConsumerLagCalculator` | Lite 消费滞后计算器 |
+| `ConsumerAttr` / `ProducerAttr` | 消费者/生产者属性标签 |
+| `InvocationStatus` | 调用状态枚举 |
+| `PopReviveMessageType` | Pop 恢复消息类型 |
+| `BatchSplittingMetricExporter` | 批量拆分指标导出 |
+
+**关键指标**：
+```java
+LongCounter messagesInTotal;        // 入站消息总数
+LongCounter messagesOutTotal;       // 出站消息总数
+LongCounter sendToDlqMessages;      // DLQ 消息数
+LongCounter transactionFinishLatency; // 事务完成延迟
+LongCounter commitMessagesTotal;    // 事务提交数
+LongCounter rollBackMessagesTotal;  // 事务回滚数
+LongHistogram getMessageSize;       // 消息大小直方图
+LongHistogram putLatency;           // 写入延迟直方图
+```
+
+**指标导出**：支持 Prometheus / OTLP / Log 三种导出方式。
+
+---
+
+## 16.22 coldctr 子包 —— 冷数据控制（5 类）
+
+### 16.22.1 核心类
+
+| 类 | 职责 |
+|----|------|
+| `ColdDataCgCtrService` | 冷数据消费组控制服务，管理消费组的冷数据阈值 |
+| `ColdDataPullRequestHoldService` | 冷数据拉取请求挂起，延迟响应冷数据请求 |
+| `ColdCtrStrategy` | 冷控制策略接口 |
+| `PIDAdaptiveColdCtrStrategy` | PID 自适应冷控制策略（基于 PID 控制算法动态调整） |
+| `SimpleColdCtrStrategy` | 简单冷控制策略（基于固定阈值） |
+
+**原理**：监控消费组的消费延迟，当消息堆积时间过长（变为"冷数据"）时，限制该消费组的拉取频率，防止 Page Cache 被冷数据污染影响热消息消费。
+
+**策略模式**：
+```java
+// ColdCtrStrategy 接口
+public interface ColdCtrStrategy {
+    boolean needCold(String group, long coldDataSum);
+    void updateColdCtrFactor(String group, long coldDataSum);
+}
+```
+
+`PIDAdaptiveColdCtrStrategy` 使用 PID 控制算法：
+- **P（比例）**：根据当前冷数据量与目标值的偏差调整
+- **I（积分）**：累积偏差历史，消除稳态误差
+- **D（微分）**：预测偏差变化趋势，提前调整
+
+在 `PullMessageProcessor` 中，拉取消息后调用：
+```java
+brokerController.getColdDataCgCtrService().coldAcc(
+    requestHeader.getConsumerGroup(), result.getColdDataSum());
+```
+
+---
+
+## 16.23 mqtrace 子包 —— 消息轨迹（4 类）
+
+### 16.23.1 核心接口
+
+```java
+public interface SendMessageHook {
+    String hookName();
+    void executeBeforeSendMessage(SendMessageContext context);
+    void executeAfterSendMessage(SendMessageContext context);
+}
+
+public interface ConsumeMessageHook {
+    String hookName();
+    void executeBeforeConsumeMessage(ConsumeMessageContext context);
+    void executeAfterConsumeMessage(ConsumeMessageContext context);
+}
+```
+
+**SendMessageContext** 封装发送上下文（Topic、Group、MsgId、BornTime、StoreTime 等），轨迹 Hook 将上下文写入 `RMQ_SYS_TRACE_TOPIC`。
+
+---
+
+## 16.24 auth 子包 —— 认证与授权（4 类）
+
+### 16.24.1 认证鉴权管道
+
+在 `BrokerController.initialRequestPipeline()`（:1139）中构建：
+
+```java
+RequestPipeline pipeline = (ctx, request) -> {};
+// 最后添加的先执行
+pipeline = pipeline.pipe(new AuthorizationPipeline(authConfig))  // 授权
+                   .pipe(new AuthenticationPipeline(authConfig));  // 认证
+```
+
+### 16.24.2 AuthenticationPipeline（:34）
+
+```java
+public void execute(ChannelHandlerContext ctx, RemotingCommand request) {
+    if (!authConfig.isAuthenticationEnabled()) return;
+    AuthenticationContext context = newContext(ctx, request);
+    evaluator.evaluate(context);  // 评估认证（用户名/密码、Token等）
+    // 失败 → throw AbortProcessException(NO_PERMISSION)
+}
+```
+
+### 16.24.3 AuthorizationPipeline
+
+```java
+public void execute(ChannelHandlerContext ctx, RemotingCommand request) {
+    if (!authConfig.isAuthorizationEnabled()) return;
+    AuthorizationContext context = newContext(ctx, request);
+    evaluator.evaluate(context);  // 评估授权（ACL：用户是否有权操作该Topic/Group）
+}
+```
+
+### 16.24.4 converter 子包
+
+| 类 | 职责 |
+|----|------|
+| `AclConverter` | ACL 配置转换 |
+| `UserConverter` | 用户配置转换 |
+
+---
+
+## 16.25 lite 子包 —— Lite 模式（13 类）
+
+5.5.0 新增的轻量消费模式，支持 Simple Consumer 和事件驱动消费。
+
+### 16.25.1 LiteEventDispatcher（:51）
+
+Lite 事件分发器，继承 ServiceThread。
+
+**核心数据结构**：
+```java
+ConcurrentMap<String, ClientEventSet> clientEventMap;    // 客户端事件表
+ConcurrentSkipListSet<FullDispatchRequest> fullDispatchSet; // 全量分发请求
+Cache<String, Object> blacklist;  // 黑名单（10秒过期）
+```
+
+**事件分发流程**：
+1. 客户端通过长轮询注册事件监听
+2. Broker 端消息到达 → 生成事件
+3. `LiteEventDispatcher` 分发事件到对应客户端
+4. 客户端收到事件后主动拉取消息
+
+### 16.25.2 LiteSubscriptionRegistry / LiteSubscriptionRegistryImpl
+
+管理 Lite 模式的订阅关系：
+- `LiteSubscription` —— 订阅信息（Topic、Group、Filter、Mode）
+- `SubscriberWrapper` —— 订阅者包装（ClientId、Channel、订阅数据）
+
+### 16.25.3 LiteLifecycleManager / RocksDBLiteLifecycleManager
+
+Lite 模式生命周期管理（基于 RocksDB 持久化）：
+- `init()` —— 初始化 RocksDB
+- `start()` —— 启动定时清理任务
+- `registerClient()` —— 注册客户端
+- `unregisterClient()` —— 注销客户端
+
+### 16.25.4 LiteSharding / LiteShardingImpl
+
+Lite 模式分片管理，将 Topic 的分区分配给不同的 Lite Consumer。
+
+### 16.25.5 其他 Lite 组件
+
+| 类 | 职责 |
+|----|------|
+| `LiteCtlListener` | Lite 控制监听器 |
+| `LiteMetadataUtil` | Lite 元数据工具 |
+| `LiteQuotaException` | Lite 配额异常 |
+| `ExclusiveEvictionTombstones` | 独占驱逐墓碑（处理重复消费） |
+
+---
+
+## 16.26 loadbalance 子包 —— 负载均衡（1 类）
+
+### 16.26.1 LoadBalanceManager
+
+5.x 消费负载均衡管理器，与 `QueryAssignmentProcessor` 配合：
+- 管理消费组到 Broker 的分配策略
+- 支持多种分配策略（平均分配、一致性哈希等）
+- 消费者上线/下线时重新分配
+
+---
+
+## 16.27 子包交互全景图
+
+```mermaid
+flowchart TB
+    subgraph Network["网络层"]
+        NS1["NettyRemotingServer<br/>(TCP:6888)"]
+        NS2["NettyRemotingServer<br/>(FAST)"]
+    end
+
+    subgraph Pipeline["请求管道"]
+        AUTH["AuthenticationPipeline<br/>认证"]
+        AUZ["AuthorizationPipeline<br/>授权"]
+    end
+
+    subgraph Processors["处理器层"]
+        SMP["SendMessageProcessor"]
+        PMP["PullMessageProcessor"]
+        POP["PopMessageProcessor"]
+        ACK["AckMessageProcessor"]
+        ETP["EndTransactionProcessor"]
+        ADM["AdminBrokerProcessor"]
+    end
+
+    subgraph Core["核心管理"]
+        TCM["TopicConfigManager"]
+        SGM["SubscriptionGroupManager"]
+        COM["ConsumerOffsetManager"]
+        CM["ConsumerManager"]
+        PM["ProducerManager"]
+        CFM["ConsumerFilterManager"]
+    end
+
+    subgraph Schedule["调度"]
+        SMS["ScheduleMessageService<br/>4.x延迟"]
+        TMS["TimerMessageStore<br/>5.x定时"]
+    end
+
+    subgraph Transaction["事务"]
+        TMS_svc["TransactionalMessageService"]
+        TMB["TransactionalMessageBridge"]
+        TCS["TransactionalMessageCheckService"]
+    end
+
+    subgraph Pop["Pop消费"]
+        PCS["PopConsumerService"]
+        PBM["PopBufferMergeService"]
+        PRS["PopReviveService"]
+    end
+
+    subgraph LongPolling["长轮询"]
+        PRHS["PullRequestHoldService"]
+        PLPS["PopLongPollingService"]
+    end
+
+    subgraph Storage["存储层"]
+        CL["CommitLog"]
+        CQ["ConsumeQueue"]
+        IF["IndexFile"]
+        TL["TimerLog"]
+    end
+
+    subgraph HA["高可用"]
+        RM["ReplicasManager<br/>Controller模式"]
+        SS["SlaveSynchronize<br/>从节点同步"]
+        EB["EscapeBridge<br/>故障转移"]
+    end
+
+    NS1 --> Pipeline --> Processors
+    Processors --> Core
+    SMP --> Schedule
+    SMP --> Transaction
+    POP --> Pop
+    PMP --> LongPolling
+    Processors --> Storage
+    HA --> Core
+```
+
+---
+
+## 16.28 关键流程时序：消息发送全链路
+
+```mermaid
+sequenceDiagram
+    participant P as Producer
+    participant NS as NettyServer
+    participant Auth as AuthPipeline
+    participant SMP as SendMessageProcessor
+    participant Hook as PutMessageHook链
+    participant Store as MessageStore
+    participant CL as CommitLog
+    participant CQ as ConsumeQueue
+    participant PRHS as PullRequestHoldService
+
+    P->>NS: SEND_MESSAGE request
+    NS->>Auth: 认证鉴权
+    Auth-->>NS: 通过
+    NS->>SMP: processRequest()
+    SMP->>SMP: preSend() 校验Topic/权限
+    SMP->>SMP: handleRetryAndDLQ() 重试/DLQ
+    SMP->>Hook: checkBeforePutMessage
+    Hook->>Hook: innerBatchChecker
+    Hook->>Hook: handleScheduleMessage<br/>(延迟→SCHEDULE_TOPIC / TIMER_TOPIC)
+    Hook->>Hook: handleLmqQuota
+    Hook-->>SMP: 校验通过
+    SMP->>Store: asyncPutMessage(msgInner)
+    Store->>CL: appendMessage()
+    CL-->>Store: PutMessageResult
+    Store-->>SMP: CompletableFuture<PutMessageResult>
+    SMP->>SMP: handlePutMessageResult()
+    SMP-->>P: SEND_MESSAGE response
+
+    par 异步分发
+        Store->>CQ: ReputMessageService分发
+        CQ->>PRHS: notifyMessageArriving()
+    end
+```
+
+---
+
+## 16.29 关键流程时序：Pop 消费全链路
+
+```mermaid
+sequenceDiagram
+    participant C as Consumer
+    participant NS as NettyServer
+    participant POP as PopMessageProcessor
+    participant PCS as PopConsumerService
+    participant Store as MessageStore
+    participant PBM as PopBufferMergeService
+    participant ACK_P as AckMessageProcessor
+    participant PRS as PopReviveService
+
+    C->>NS: POP_MESSAGE(invisibleTime=30s)
+    NS->>POP: processRequest()
+    POP->>PCS: popAsync(topic, group, queueId, maxNums)
+    PCS->>Store: getMessage(offset, maxNums)
+    Store-->>PCS: 消息列表
+    PCS->>PCS: 生成PopCheckPoint(popTime, invisibleTime)
+    PCS-->>POP: PopConsumerContext(msgList, ckList)
+    POP-->>C: 消息列表(每条含PROPERTY_POP_CK)
+
+    alt 消费成功
+        C->>NS: ACK_MESSAGE(ck)
+        NS->>ACK_P: processRequest()
+        ACK_P->>PBM: 更新PopCheckPoint(Ack)
+        PBM->>PBM: 批量合并写入
+        PBM->>Store: 推进消费进度
+    else 消费超时(30s后)
+        PRS->>Store: 扫描reviveTopic
+        PRS->>PRS: 检查CheckPoint是否已Ack
+        alt 未Ack
+            PRS->>Store: 重新投递消息到原始Topic
+        end
+    end
+```
+
+---
+
+## 16.30 子包文件统计
+
+| 子包 | 文件数 | 核心职责 |
+|------|--------|----------|
+| processor | 25 | 请求处理（Send/Pull/Pop/Ack/EndTransaction/Admin...） |
+| transaction | 14 | 事务消息（半消息/回查/提交回滚） |
+| config | 17 | 配置管理（JSON + RocksDB v1/v2） |
+| lite | 13 | Lite 轻量消费模式 |
+| client | 13 | 客户端连接管理（Consumer/Producer/Rebalance） |
+| longpolling | 12 | 长轮询（Pull/Pop/Lite） |
+| metrics | 11 | OpenTelemetry 指标监控 |
+| pop | 10 | Pop 消费服务（KV Store/Cache/Lock） |
+| filter | 6 | 消息过滤（Tag/SQL92/BloomFilter） |
+| topic | 5 | Topic 配置管理 + 静态 Topic |
+| offset | 5 | 消费偏移量管理（Cluster/Broadcast） |
+| coldctr | 5 | 冷数据控制 |
+| auth | 4 | 认证鉴权（Pipeline 模式） |
+| mqtrace | 4 | 消息轨迹 Hook |
+| pagecache | 3 | Page Cache 监控 |
+| subscription | 2 | 消费组配置管理 |
+| plugin | 2 | 插件机制 |
+| schedule | 2 | 4.x 延迟消息调度 |
+| util | 2 | HookUtils 工具类 |
+| controller | 1 | ReplicasManager（Controller 模式） |
+| dledger | 1 | DLedger 角色变更 |
+| failover | 1 | EscapeBridge 故障转移 |
+| latency | 1 | BrokerFastFailure 快速失败 |
+| loadbalance | 1 | 负载均衡管理 |
+| out | 1 | BrokerOuterAPI 外部通信 |
+| slave | 1 | SlaveSynchronize 从节点同步 |
+| **总计** | **168** | |
+
+---
+
+> 本章覆盖了 `broker` 模块下全部 27 个子包的源码级分析，包含关键类职责、核心方法实现逻辑（含行号引用）、数据结构、流程图和交互关系。
