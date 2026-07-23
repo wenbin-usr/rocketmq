@@ -1,0 +1,632 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 1280" font-family="'Segoe UI','Microsoft YaHei','PingFang SC',sans-serif" text-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F6F9FE"/>
+      <stop offset="1" stop-color="#EAEFF7"/>
+    </linearGradient>
+    <linearGradient id="hdrAmber" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#FBBF24"/>
+    </linearGradient>
+    <linearGradient id="hdrPink" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#EC4899"/><stop offset="1" stop-color="#F472B6"/>
+    </linearGradient>
+    <linearGradient id="hdrIndigo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#818CF8"/>
+    </linearGradient>
+    <linearGradient id="hdrSky" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0EA5E9"/><stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <linearGradient id="hdrPurple" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="hdrTeal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#14B8A6"/><stop offset="1" stop-color="#2DD4BF"/>
+    </linearGradient>
+    <linearGradient id="hdrSlate" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#64748B"/><stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="hdrRose" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F43F5E"/><stop offset="1" stop-color="#FB7185"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="card" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/>
+      <feOffset dx="0" dy="1.5"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.12"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748B"/>
+    </marker>
+    <marker id="arrBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arrPink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#DB2777"/>
+    </marker>
+    <marker id="arrDash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arrRose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#E11D48"/>
+    </marker>
+
+    <symbol id="fileIcon" viewBox="0 0 24 24">
+      <path d="M5 3 h9 l5 5 v13 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 V4 a1 1 0 0 1 1 -1 z" fill="#fff" stroke="currentColor" stroke-width="1.2"/>
+      <path d="M14 3 v5 h5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="7" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="1"/>
+      <line x1="7" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1"/>
+    </symbol>
+    <symbol id="diskIcon" viewBox="0 0 48 48">
+      <ellipse cx="24" cy="12" rx="18" ry="6" fill="#fff" stroke="#64748B" stroke-width="1.5"/>
+      <path d="M6 12 v24 a18 6 0 0 0 36 0 V12" fill="#fff" stroke="#64748B" stroke-width="1.5"/>
+      <ellipse cx="24" cy="12" rx="10" ry="3" fill="#E2E8F0"/>
+      <path d="M6 24 a18 6 0 0 0 36 0" fill="none" stroke="#94A3B8" stroke-width="1"/>
+    </symbol>
+  </defs>
+
+  <rect width="1640" height="1280" fill="url(#bg)"/>
+
+  <!-- ============ TITLE ============ -->
+  <g>
+    <text x="820" y="52" text-anchor="middle" font-size="30" font-weight="700" fill="#0F172A" letter-spacing="0.5">Apache RocketMQ 5.5.0 — Architecture Overview</text>
+    <text x="820" y="80" text-anchor="middle" font-size="13.5" fill="#64748B">Distributed Messaging &amp; Streaming Platform  ·  NameServer / Broker / Store / HA / Controller / Proxy / TieredStore</text>
+    <line x1="610" y1="92" x2="1030" y2="92" stroke="#CBD5E1" stroke-width="1"/>
+  </g>
+
+  <!-- ============ PRODUCER ============ -->
+  <g id="producer">
+    <rect x="40" y="120" width="430" height="230" rx="12" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.2" filter="url(#shadow)"/>
+    <path d="M40 132 a12 12 0 0 1 12 -12 h406 a12 12 0 0 1 12 12 v26 h-430 z" fill="url(#hdrAmber)"/>
+    <text x="60" y="141" font-size="14" font-weight="700" fill="#FFFFFF">⚡ Producer Cluster 生产者集群</text>
+    <text x="450" y="141" text-anchor="end" font-size="11" fill="#FEF3C7">DefaultMQProducerImpl</text>
+
+    <!-- producer 1 -->
+    <g>
+      <rect x="60" y="178" width="390" height="44" rx="8" fill="#FFFBEB" stroke="#FBBF24" stroke-width="1"/>
+      <circle cx="80" cy="200" r="9" fill="#F59E0B"/>
+      <text x="80" y="204" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">P1</text>
+      <text x="98" y="195" font-size="12" font-weight="600" fill="#92400E">sendDefaultImpl → selectOneMessageQueue</text>
+      <text x="98" y="212" font-size="10.5" fill="#B45309">Queue Selector · Fault Tolerance · Retry</text>
+    </g>
+    <!-- producer 2 -->
+    <g>
+      <rect x="60" y="230" width="185" height="50" rx="8" fill="#FFFBEB" stroke="#FBBF24" stroke-width="1"/>
+      <text x="152" y="251" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400E">4.x Delay</text>
+      <text x="152" y="267" text-anchor="middle" font-size="9.5" fill="#B45309">setDelayTimeLevel()</text>
+    </g>
+    <g>
+      <rect x="265" y="230" width="185" height="50" rx="8" fill="#FFFBEB" stroke="#FBBF24" stroke-width="1"/>
+      <text x="357" y="251" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400E">5.x Timer</text>
+      <text x="357" y="267" text-anchor="middle" font-size="9.5" fill="#B45309">setDeliverTimeMs()</text>
+    </g>
+    <g>
+      <rect x="60" y="290" width="390" height="44" rx="8" fill="#FFFBEB" stroke="#FBBF24" stroke-width="1"/>
+      <circle cx="80" cy="312" r="9" fill="#F59E0B"/>
+      <text x="80" y="316" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">TX</text>
+      <text x="98" y="307" font-size="12" font-weight="600" fill="#92400E">Transaction Message 事务消息</text>
+      <text x="98" y="324" font-size="10.5" fill="#B45309">half → commit/rollback · localTransactionExecutor</text>
+    </g>
+  </g>
+
+  <!-- ============ NAMESERVER ============ -->
+  <g id="namesrv">
+    <rect x="525" y="120" width="540" height="170" rx="12" fill="#FFFFFF" stroke="#A5B4FC" stroke-width="1.2" filter="url(#shadow)"/>
+    <path d="M525 132 a12 12 0 0 1 12 -12 h516 a12 12 0 0 1 12 12 v26 h-540 z" fill="url(#hdrIndigo)"/>
+    <text x="545" y="141" font-size="14" font-weight="700" fill="#FFFFFF">🛰 NameServer 路由中心</text>
+    <text x="1045" y="141" text-anchor="end" font-size="11" fill="#E0E7FF">RouteInfoManager</text>
+
+    <g font-size="11" fill="#3730A3">
+      <rect x="545" y="178" width="160" height="46" rx="7" fill="#EEF2FF" stroke="#A5B4FC"/>
+      <text x="625" y="198" text-anchor="middle" font-weight="700" fill="#4338CA">registerBroker</text>
+      <text x="625" y="214" text-anchor="middle" font-size="9.5" fill="#6366F1">:226 注册Broker</text>
+
+      <rect x="715" y="178" width="160" height="46" rx="7" fill="#EEF2FF" stroke="#A5B4FC"/>
+      <text x="795" y="198" text-anchor="middle" font-weight="700" fill="#4338CA">pickupTopicRouteData</text>
+      <text x="795" y="214" text-anchor="middle" font-size="9.5" fill="#6366F1">:700 路由发现</text>
+
+      <rect x="885" y="178" width="160" height="46" rx="7" fill="#EEF2FF" stroke="#A5B4FC"/>
+      <text x="965" y="198" text-anchor="middle" font-weight="700" fill="#4338CA">scanNotActiveBroker</text>
+      <text x="965" y="214" text-anchor="middle" font-size="9.5" fill="#6366F1">:803 心跳检测</text>
+
+      <rect x="545" y="232" width="500" height="46" rx="7" fill="#EEF2FF" stroke="#A5B4FC"/>
+      <text x="795" y="252" text-anchor="middle" font-weight="700" fill="#4338CA">KV / TopicRouteData / BrokerData / QueueData</text>
+      <text x="795" y="268" text-anchor="middle" font-size="9.5" fill="#6366F1">无状态集群 · 互相隔离 · 30s 心跳上报</text>
+    </g>
+  </g>
+
+  <!-- ============ CONSUMER ============ -->
+  <g id="consumer">
+    <rect x="1140" y="120" width="460" height="230" rx="12" fill="#FFFFFF" stroke="#F9A8D4" stroke-width="1.2" filter="url(#shadow)"/>
+    <path d="M1140 132 a12 12 0 0 1 12 -12 h436 a12 12 0 0 1 12 12 v26 h-460 z" fill="url(#hdrPink)"/>
+    <text x="1160" y="141" font-size="14" font-weight="700" fill="#FFFFFF">📥 Consumer Cluster 消费者集群</text>
+    <text x="1580" y="141" text-anchor="end" font-size="11" fill="#FCE7F3">DefaultMQPushConsumerImpl</text>
+
+    <g>
+      <rect x="1160" y="178" width="210" height="80" rx="8" fill="#FDF2F8" stroke="#EC4899" stroke-width="1"/>
+      <text x="1265" y="200" text-anchor="middle" font-size="12.5" font-weight="700" fill="#9D174D">Push Consumer</text>
+      <text x="1265" y="218" text-anchor="middle" font-size="10" fill="#BE185D">pullMessage :246</text>
+      <text x="1265" y="234" text-anchor="middle" font-size="10" fill="#BE185D">Rebalance 20s</text>
+      <text x="1265" y="250" text-anchor="middle" font-size="9.5" fill="#BE185D">ProcessQueue</text>
+    </g>
+    <g>
+      <rect x="1380" y="178" width="200" height="80" rx="8" fill="#FDF2F8" stroke="#EC4899" stroke-width="1"/>
+      <text x="1480" y="200" text-anchor="middle" font-size="12.5" font-weight="700" fill="#9D174D">Pop Consumer</text>
+      <text x="1480" y="218" text-anchor="middle" font-size="10" fill="#BE185D">popMessage :501</text>
+      <text x="1480" y="234" text-anchor="middle" font-size="10" fill="#BE185D">无 Rebalance</text>
+      <text x="1480" y="250" text-anchor="middle" font-size="9.5" fill="#BE185D">PopCheckPoint</text>
+    </g>
+    <g>
+      <rect x="1160" y="270" width="420" height="64" rx="8" fill="#FDF2F8" stroke="#EC4899" stroke-width="1"/>
+      <text x="1370" y="290" text-anchor="middle" font-size="11.5" font-weight="700" fill="#9D174D">RebalanceImpl.doRebalance :232 → rebalanceByTopic :268</text>
+      <text x="1370" y="308" text-anchor="middle" font-size="10" fill="#BE185D">updateProcessQueueTableInRebalance :426 · allocate MessageQueue</text>
+      <text x="1370" y="324" text-anchor="middle" font-size="9.5" fill="#BE185D">策略: AVG / CONS_HASH / MACHINE_ROOM</text>
+    </g>
+  </g>
+
+  <!-- ============ BROKER (main) ============ -->
+  <g id="broker">
+    <rect x="40" y="350" width="1080" height="880" rx="14" fill="#FFFFFF" stroke="#7DD3FC" stroke-width="1.4" filter="url(#shadow)"/>
+    <path d="M40 364 a14 14 0 0 1 14 -14 h1052 a14 14 0 0 1 14 14 v30 h-1080 z" fill="url(#hdrSky)"/>
+    <text x="60" y="378" font-size="15" font-weight="700" fill="#FFFFFF">🖥 Broker  ·  BrokerController (2825 行总控中枢)</text>
+    <text x="1100" y="378" text-anchor="end" font-size="11" fill="#E0F2FE">initialize():915  start():1962  registerProcessor():1161</text>
+
+    <!-- ===== Layer 1: Processor ===== -->
+    <text x="60" y="412" font-size="12.5" font-weight="700" fill="#0369A1">① Processor Layer 请求处理层</text>
+    <text x="270" y="412" font-size="10.5" fill="#0EA5E9">— RemotingCommand 协议入口</text>
+
+    <g font-size="10.5">
+      <!-- chip template -->
+      <g>
+        <rect x="60" y="424" width="160" height="84" rx="9" fill="#EFF6FF" stroke="#60A5FA" stroke-width="1" filter="url(#card)"/>
+        <rect x="60" y="424" width="160" height="20" rx="9" fill="#3B82F6"/>
+        <rect x="60" y="435" width="160" height="9" fill="#3B82F6"/>
+        <text x="140" y="439" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">SendMessageProcessor</text>
+        <text x="140" y="461" text-anchor="middle" font-size="9.5" fill="#1E40AF">:735行 · processRequest:89</text>
+        <text x="140" y="476" text-anchor="middle" font-size="9" fill="#3B82F6">async sendMessage()</text>
+        <text x="140" y="491" text-anchor="middle" font-size="9" fill="#3B82F6">CompletableFuture</text>
+      </g>
+      <g>
+        <rect x="232" y="424" width="160" height="84" rx="9" fill="#EFF6FF" stroke="#60A5FA" stroke-width="1" filter="url(#card)"/>
+        <rect x="232" y="424" width="160" height="20" rx="9" fill="#3B82F6"/>
+        <rect x="232" y="435" width="160" height="9" fill="#3B82F6"/>
+        <text x="312" y="439" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">PullMessageProcessor</text>
+        <text x="312" y="461" text-anchor="middle" font-size="9.5" fill="#1E40AF">:917行 · processRequest:304</text>
+        <text x="312" y="476" text-anchor="middle" font-size="9" fill="#3B82F6">getMessageAsync:566</text>
+        <text x="312" y="491" text-anchor="middle" font-size="9" fill="#3B82F6">长轮询挂起</text>
+      </g>
+      <g>
+        <rect x="404" y="424" width="160" height="84" rx="9" fill="#EFF6FF" stroke="#60A5FA" stroke-width="1" filter="url(#card)"/>
+        <rect x="404" y="424" width="160" height="20" rx="9" fill="#3B82F6"/>
+        <rect x="404" y="435" width="160" height="9" fill="#3B82F6"/>
+        <text x="484" y="439" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">PopMessageProcessor</text>
+        <text x="484" y="461" text-anchor="middle" font-size="9.5" fill="#1E40AF">:1127行 · processRequest:290</text>
+        <text x="484" y="476" text-anchor="middle" font-size="9" fill="#3B82F6">popAsync · Retry</text>
+        <text x="484" y="491" text-anchor="middle" font-size="9" fill="#3B82F6">16级退避</text>
+      </g>
+      <g>
+        <rect x="576" y="424" width="160" height="84" rx="9" fill="#EFF6FF" stroke="#60A5FA" stroke-width="1" filter="url(#card)"/>
+        <rect x="576" y="424" width="160" height="20" rx="9" fill="#3B82F6"/>
+        <rect x="576" y="435" width="160" height="9" fill="#3B82F6"/>
+        <text x="656" y="439" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">AckMessageProcessor</text>
+        <text x="656" y="461" text-anchor="middle" font-size="9.5" fill="#1E40AF">:571行 · 双路径Ack</text>
+        <text x="656" y="476" text-anchor="middle" font-size="9" fill="#3B82F6">appendAck(PopBuffer)</text>
+        <text x="656" y="491" text-anchor="middle" font-size="9" fill="#3B82F6">appendAckNew(RocksDB)</text>
+      </g>
+      <g>
+        <rect x="748" y="424" width="160" height="84" rx="9" fill="#EFF6FF" stroke="#60A5FA" stroke-width="1" filter="url(#card)"/>
+        <rect x="748" y="424" width="160" height="20" rx="9" fill="#3B82F6"/>
+        <rect x="748" y="435" width="160" height="9" fill="#3B82F6"/>
+        <text x="828" y="439" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">EndTransactionProcessor</text>
+        <text x="828" y="461" text-anchor="middle" font-size="9.5" fill="#1E40AF">:372行 · COMMIT/ROLLBACK</text>
+        <text x="828" y="476" text-anchor="middle" font-size="9" fill="#3B82F6">sendFinalMessage</text>
+        <text x="828" y="491" text-anchor="middle" font-size="9" fill="#3B82F6">deletePrepare</text>
+      </g>
+      <g>
+        <rect x="920" y="424" width="160" height="84" rx="9" fill="#EFF6FF" stroke="#60A5FA" stroke-width="1" filter="url(#card)"/>
+        <rect x="920" y="424" width="160" height="20" rx="9" fill="#3B82F6"/>
+        <rect x="920" y="435" width="160" height="9" fill="#3B82F6"/>
+        <text x="1000" y="439" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">QueryMessageProcessor</text>
+        <text x="1000" y="461" text-anchor="middle" font-size="9.5" fill="#1E40AF">查询/Trace/Client</text>
+        <text x="1000" y="476" text-anchor="middle" font-size="9" fill="#3B82F6">HeartbeatProcessor</text>
+        <text x="1000" y="491" text-anchor="middle" font-size="9" fill="#3B82F6">AdminBrokerProcessor</text>
+      </g>
+    </g>
+
+    <!-- ===== Layer 2: Hook & Services ===== -->
+    <text x="60" y="540" font-size="12.5" font-weight="700" fill="#5B21B6">② Hook Chain &amp; Messaging Services 钩子与服务层</text>
+
+    <!-- PutMessageHook chain -->
+    <g>
+      <rect x="60" y="554" width="270" height="156" rx="9" fill="#F5F3FF" stroke="#A78BFA" stroke-width="1" filter="url(#card)"/>
+      <text x="195" y="572" text-anchor="middle" font-size="11" font-weight="700" fill="#6D28D9">PutMessageHook 链 (写CLog前)</text>
+      <g font-size="10" fill="#5B21B6">
+        <rect x="74" y="580" width="242" height="26" rx="5" fill="#fff" stroke="#C4B5FD"/>
+        <text x="84" y="598" font-weight="600">① checkBeforePutMessage</text>
+        <text x="308" y="598" text-anchor="end" font-size="9" fill="#7C3AED">校验</text>
+
+        <rect x="74" y="610" width="242" height="26" rx="5" fill="#fff" stroke="#C4B5FD"/>
+        <text x="84" y="628" font-weight="600">② innerBatchChecker</text>
+        <text x="308" y="628" text-anchor="end" font-size="9" fill="#7C3AED">批</text>
+
+        <rect x="74" y="640" width="242" height="26" rx="5" fill="#FEF3C7" stroke="#F59E0B"/>
+        <text x="84" y="658" font-weight="600">③ handleScheduleMessage</text>
+        <text x="308" y="658" text-anchor="end" font-size="9" fill="#B45309">★路由</text>
+
+        <rect x="74" y="670" width="242" height="26" rx="5" fill="#fff" stroke="#C4B5FD"/>
+        <text x="84" y="688" font-weight="600">④ handleLmqQuota</text>
+        <text x="308" y="688" text-anchor="end" font-size="9" fill="#7C3AED">配额</text>
+      </g>
+    </g>
+
+    <!-- Services grid -->
+    <g font-size="10.5">
+      <g>
+        <rect x="346" y="554" width="248" height="74" rx="8" fill="#FAF5FF" stroke="#A78BFA" stroke-width="1" filter="url(#card)"/>
+        <text x="470" y="574" text-anchor="middle" font-weight="700" fill="#6D28D9">ScheduleMessageService (4.x)</text>
+        <text x="470" y="591" text-anchor="middle" font-size="9.5" fill="#7C3AED">parseDelayLevel:300 · 18级</text>
+        <text x="470" y="606" text-anchor="middle" font-size="9.5" fill="#7C3AED">DeliverDelayedMessageTimerTask:366</text>
+        <text x="470" y="620" text-anchor="middle" font-size="9" fill="#A21CAF">SCHEDULE_TOPIC 改写</text>
+      </g>
+      <g>
+        <rect x="604" y="554" width="248" height="74" rx="8" fill="#FAF5FF" stroke="#A78BFA" stroke-width="1" filter="url(#card)"/>
+        <text x="728" y="574" text-anchor="middle" font-weight="700" fill="#6D28D9">TimerMessageStore (5.x)</text>
+        <text x="728" y="591" text-anchor="middle" font-size="9.5" fill="#7C3AED">TIMER_TOPIC=rmq_sys_wheel_timer</text>
+        <text x="728" y="606" text-anchor="middle" font-size="9.5" fill="#7C3AED">precisionMs=1000 · TTL=7d</text>
+        <text x="728" y="620" text-anchor="middle" font-size="9" fill="#A21CAF">TimerWheel 时间轮调度</text>
+      </g>
+      <g>
+        <rect x="862" y="554" width="248" height="74" rx="8" fill="#FAF5FF" stroke="#A78BFA" stroke-width="1" filter="url(#card)"/>
+        <text x="986" y="574" text-anchor="middle" font-weight="700" fill="#6D28D9">TransactionalMessageService</text>
+        <text x="986" y="591" text-anchor="middle" font-size="9.5" fill="#7C3AED">asyncPrepareMessage:99 · check:162</text>
+        <text x="986" y="606" text-anchor="middle" font-size="9.5" fill="#7C3AED">RMQ_SYS_TRANS_HALF_TOPIC</text>
+        <text x="986" y="620" text-anchor="middle" font-size="9" fill="#A21CAF">回查 · fillOpRemoveMap</text>
+      </g>
+      <g>
+        <rect x="346" y="636" width="248" height="74" rx="8" fill="#FAF5FF" stroke="#A78BFA" stroke-width="1" filter="url(#card)"/>
+        <text x="470" y="656" text-anchor="middle" font-weight="700" fill="#6D28D9">PopBufferMergeService</text>
+        <text x="470" y="673" text-anchor="middle" font-size="9.5" fill="#7C3AED">内存缓冲 PopCheckPoint</text>
+        <text x="470" y="688" text-anchor="middle" font-size="9.5" fill="#7C3AED">scan():5ms · 双位图 CAS</text>
+        <text x="470" y="702" text-anchor="middle" font-size="9" fill="#A21CAF">isCkDone 全1判定</text>
+      </g>
+      <g>
+        <rect x="604" y="636" width="248" height="74" rx="8" fill="#FAF5FF" stroke="#A78BFA" stroke-width="1" filter="url(#card)"/>
+        <text x="728" y="656" text-anchor="middle" font-weight="700" fill="#6D28D9">PopReviveService</text>
+        <text x="728" y="673" text-anchor="middle" font-size="9.5" fill="#7C3AED">reviveTopic=SCHEDULE_REVIVE</text>
+        <text x="728" y="688" text-anchor="middle" font-size="9.5" fill="#7C3AED">超时未 ACK → 重投</text>
+        <text x="728" y="702" text-anchor="middle" font-size="9" fill="#A21CAF">确保 At-Least-Once</text>
+      </g>
+      <g>
+        <rect x="862" y="636" width="248" height="74" rx="8" fill="#FAF5FF" stroke="#A78BFA" stroke-width="1" filter="url(#card)"/>
+        <text x="986" y="656" text-anchor="middle" font-weight="700" fill="#6D28D9">PullRequestHoldService</text>
+        <text x="986" y="673" text-anchor="middle" font-size="9.5" fill="#7C3AED">suspendPullRequest:45</text>
+        <text x="986" y="688" text-anchor="middle" font-size="9.5" fill="#7C3AED">notifyMessageArriving:119</text>
+        <text x="986" y="702" text-anchor="middle" font-size="9" fill="#A21CAF">5s 长轮询挂起</text>
+      </g>
+    </g>
+
+    <!-- ===== Layer 3: Store Engine ===== -->
+    <text x="60" y="740" font-size="12.5" font-weight="700" fill="#047857">③ Message Store Engine 存储引擎  ·  DefaultMessageStore.asyncPutMessage:645</text>
+
+    <g font-size="10.5">
+      <g>
+        <rect x="60" y="754" width="200" height="96" rx="9" fill="#ECFDF5" stroke="#34D399" stroke-width="1" filter="url(#card)"/>
+        <rect x="60" y="754" width="200" height="22" rx="9" fill="#10B981"/>
+        <rect x="60" y="766" width="200" height="10" fill="#10B981"/>
+        <text x="160" y="770" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">CommitLog</text>
+        <text x="160" y="793" text-anchor="middle" font-size="9.5" fill="#065F46">asyncPutMessage:969</text>
+        <text x="160" y="808" text-anchor="middle" font-size="9" fill="#059669">topicQueueLock + putMessageLock</text>
+        <text x="160" y="823" text-anchor="middle" font-size="9" fill="#059669">MappedFile 1G · 顺序写</text>
+        <text x="160" y="838" text-anchor="middle" font-size="9" fill="#059669">tagsCode=delayLevel</text>
+      </g>
+      <g>
+        <rect x="276" y="754" width="200" height="96" rx="9" fill="#ECFDF5" stroke="#34D399" stroke-width="1" filter="url(#card)"/>
+        <rect x="276" y="754" width="200" height="22" rx="9" fill="#10B981"/>
+        <rect x="276" y="766" width="200" height="10" fill="#10B981"/>
+        <text x="376" y="770" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">ConsumeQueue</text>
+        <text x="376" y="793" text-anchor="middle" font-size="9.5" fill="#065F46">UNIT_SIZE=20B</text>
+        <text x="376" y="808" text-anchor="middle" font-size="9" fill="#059669">8 offset + 4 size</text>
+        <text x="376" y="823" text-anchor="middle" font-size="9" fill="#059669">+ 8 tagHash</text>
+        <text x="376" y="838" text-anchor="middle" font-size="9" fill="#059669">逻辑队列 · 消费索引</text>
+      </g>
+      <g>
+        <rect x="492" y="754" width="200" height="96" rx="9" fill="#ECFDF5" stroke="#34D399" stroke-width="1" filter="url(#card)"/>
+        <rect x="492" y="754" width="200" height="22" rx="9" fill="#10B981"/>
+        <rect x="492" y="766" width="200" height="10" fill="#10B981"/>
+        <text x="592" y="770" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">IndexFile</text>
+        <text x="592" y="793" text-anchor="middle" font-size="9.5" fill="#065F46">哈希索引 500w 槽</text>
+        <text x="592" y="808" text-anchor="middle" font-size="9" fill="#059669">key/uniqId/timeRange</text>
+        <text x="592" y="823" text-anchor="middle" font-size="9" fill="#059669">500 槽 × 4B · 链表</text>
+        <text x="592" y="838" text-anchor="middle" font-size="9" fill="#059669">支持消息回溯</text>
+      </g>
+      <g>
+        <rect x="708" y="754" width="200" height="96" rx="9" fill="#ECFDF5" stroke="#34D399" stroke-width="1" filter="url(#card)"/>
+        <rect x="708" y="754" width="200" height="22" rx="9" fill="#10B981"/>
+        <rect x="708" y="766" width="200" height="10" fill="#10B981"/>
+        <text x="808" y="770" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">TimerWheel</text>
+        <text x="808" y="793" text-anchor="middle" font-size="9.5" fill="#065F46">Slot 32B · slots=604800</text>
+        <text x="808" y="808" text-anchor="middle" font-size="9" fill="#059669">timeMs+first/last+num</text>
+        <text x="808" y="823" text-anchor="middle" font-size="9" fill="#059669">7天 ~38.7MB</text>
+        <text x="808" y="838" text-anchor="middle" font-size="9" fill="#059669">precisionMs=1000</text>
+      </g>
+      <g>
+        <rect x="924" y="754" width="176" height="96" rx="9" fill="#ECFDF5" stroke="#34D399" stroke-width="1" filter="url(#card)"/>
+        <rect x="924" y="754" width="176" height="22" rx="9" fill="#10B981"/>
+        <rect x="924" y="766" width="176" height="10" fill="#10B981"/>
+        <text x="1012" y="770" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">TimerLog</text>
+        <text x="1012" y="793" text-anchor="middle" font-size="9.5" fill="#065F46">UNIT_SIZE=52B</text>
+        <text x="1012" y="808" text-anchor="middle" font-size="9" fill="#059669">4+8+4+8+4</text>
+        <text x="1012" y="823" text-anchor="middle" font-size="9" fill="#059669">+8+4+4+8</text>
+        <text x="1012" y="838" text-anchor="middle" font-size="9" fill="#059669">定时持久化</text>
+      </g>
+    </g>
+
+    <!-- ===== Layer 4: File System ===== -->
+    <text x="60" y="878" font-size="12.5" font-weight="700" fill="#475569">④ Local File System 本地文件存储  ·  MappedFile + 零拷贝 (write/sendfile)</text>
+
+    <g>
+      <rect x="60" y="892" width="320" height="160" rx="10" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1" filter="url(#card)"/>
+      <text x="220" y="913" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">CommitLog 文件</text>
+      <g color="#475569">
+        <use href="#fileIcon" x="84" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="120" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="156" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="192" y="924" width="26" height="26"/>
+      </g>
+      <text x="220" y="984" text-anchor="middle" font-size="9.5" fill="#475569">00000000000000000000 · 固定 1GB</text>
+      <text x="220" y="1000" text-anchor="middle" font-size="9.5" fill="#475569">MappedByteBuffer · 堆外内存</text>
+      <text x="220" y="1016" text-anchor="middle" font-size="9.5" fill="#475569">顺序写 + PageCache flush</text>
+      <text x="220" y="1036" text-anchor="middle" font-size="9" fill="#64748B" font-style="italic">ReputMessageService 异步 dispatch</text>
+    </g>
+    <g>
+      <rect x="400" y="892" width="320" height="160" rx="10" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1" filter="url(#card)"/>
+      <text x="560" y="913" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">ConsumeQueue 文件</text>
+      <g color="#475569">
+        <use href="#fileIcon" x="424" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="460" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="496" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="532" y="924" width="26" height="26"/>
+      </g>
+      <text x="560" y="984" text-anchor="middle" font-size="9.5" fill="#475569">topic/queueId 分目录</text>
+      <text x="560" y="1000" text-anchor="middle" font-size="9.5" fill="#475569">30w 条/文件 · ~5.72MB</text>
+      <text x="560" y="1016" text-anchor="middle" font-size="9.5" fill="#475569">消费 offset 持久化</text>
+      <text x="560" y="1036" text-anchor="middle" font-size="9" fill="#64748B" font-style="italic">ConsumerOffsetManager</text>
+    </g>
+    <g>
+      <rect x="740" y="892" width="360" height="160" rx="10" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1" filter="url(#card)"/>
+      <text x="920" y="913" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">IndexFile 文件  /  TimerLog / TimerWheel</text>
+      <g color="#475569">
+        <use href="#fileIcon" x="764" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="800" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="836" y="924" width="26" height="26"/>
+        <use href="#fileIcon" x="872" y="924" width="26" height="26"/>
+      </g>
+      <text x="920" y="984" text-anchor="middle" font-size="9.5" fill="#475569">IndexFile: 400MB · 500w hash 槽</text>
+      <text x="920" y="1000" text-anchor="middle" font-size="9.5" fill="#475569">TimerLog: 52B/条 · 滚动写</text>
+      <text x="920" y="1016" text-anchor="middle" font-size="9.5" fill="#475569">TimerWheel: 32B/slot 时间轮</text>
+      <text x="920" y="1036" text-anchor="middle" font-size="9" fill="#64748B" font-style="italic">MappedFileQueue 统一管理</text>
+    </g>
+
+    <!-- store footer -->
+    <g>
+      <rect x="60" y="1068" width="1040" height="138" rx="10" fill="#F0FDFA" stroke="#5EEAD4" stroke-width="1"/>
+      <text x="580" y="1090" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0F766E">⏱ 后台服务生态 Background Services</text>
+      <g font-size="10" fill="#115E59">
+        <text x="80" y="1114">• ReputMessageService — CommitLog → CQ/Index dispatch</text>
+        <text x="80" y="1132">• HAService / GroupTransferService — 主从同步 (10ms 循环)</text>
+        <text x="80" y="1150">• AllocateMappedFileService — MappedFile 预分配</text>
+        <text x="80" y="1168">• StoreCheckpoint / IndexService / CleanCommitLogService</text>
+        <text x="560" y="1114">• FlushConsumeQueueService — 刷盘</text>
+        <text x="560" y="1132">• CommitLogDispatcherBuildConsumeQueue — 构建 CQ</text>
+        <text x="560" y="1150">• CommitLogDispatcherBuildIndex — 构建 Index</text>
+        <text x="560" y="1168">• CommitLogDispatcherCalcBitMap — tagsCode 计算</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ============ RIGHT COLUMN ============ -->
+
+  <!-- Controller -->
+  <g id="controller">
+    <rect x="1150" y="350" width="450" height="180" rx="12" fill="#FFFFFF" stroke="#C4B5FD" stroke-width="1.2" filter="url(#shadow)"/>
+    <path d="M1150 362 a12 12 0 0 1 12 -12 h426 a12 12 0 0 1 12 12 v26 h-450 z" fill="url(#hdrPurple)"/>
+    <text x="1170" y="378" font-size="14" font-weight="700" fill="#FFFFFF">👑 Controller (DLedger 自动选主)</text>
+    <text x="1580" y="378" text-anchor="end" font-size="10.5" fill="#F3E8FF">5.x 控制面</text>
+    <g font-size="10">
+      <rect x="1170" y="408" width="200" height="50" rx="7" fill="#F5F3FF" stroke="#A78BFA"/>
+      <text x="1270" y="427" text-anchor="middle" font-weight="700" fill="#6D28D9">ReplicasManager</text>
+      <text x="1270" y="443" text-anchor="middle" font-size="9.5" fill="#7C3AED">INITIAL→FENCED</text>
+      <text x="1270" y="456" text-anchor="middle" font-size="9.5" fill="#7C3AED">→FOLLOWING/LEADING</text>
+
+      <rect x="1380" y="408" width="200" height="50" rx="7" fill="#F5F3FF" stroke="#A78BFA"/>
+      <text x="1480" y="427" text-anchor="middle" font-weight="700" fill="#6D28D9">DLedger Raft</text>
+      <text x="1480" y="443" text-anchor="middle" font-size="9.5" fill="#7C3AED">多数派提交</text>
+      <text x="1480" y="456" text-anchor="middle" font-size="9.5" fill="#7C3AED">Master 选举</text>
+
+      <rect x="1170" y="470" width="410" height="48" rx="7" fill="#F5F3FF" stroke="#A78BFA"/>
+      <text x="1375" y="489" text-anchor="middle" font-weight="700" fill="#6D28D9">ControllerMode HA · 自动 Master 切换</text>
+      <text x="1375" y="506" text-anchor="middle" font-size="9.5" fill="#7C3AED">ReplicasManager · SyncStateSet · Master/Slave 无感切换</text>
+    </g>
+  </g>
+
+  <!-- Proxy -->
+  <g id="proxy">
+    <rect x="1150" y="548" width="450" height="160" rx="12" fill="#FFFFFF" stroke="#5EEAD4" stroke-width="1.2" filter="url(#shadow)"/>
+    <path d="M1150 560 a12 12 0 0 1 12 -12 h426 a12 12 0 0 1 12 12 v26 h-450 z" fill="url(#hdrTeal)"/>
+    <text x="1170" y="576" font-size="14" font-weight="700" fill="#FFFFFF">🌐 Proxy (5.x gRPC 代理层)</text>
+    <text x="1580" y="576" text-anchor="end" font-size="10.5" fill="#CCFBF1">多协议接入</text>
+    <g font-size="10">
+      <rect x="1170" y="604" width="135" height="86" rx="7" fill="#F0FDFA" stroke="#5EEAD4"/>
+      <text x="1237" y="624" text-anchor="middle" font-weight="700" fill="#0F766E">gRPC API</text>
+      <text x="1237" y="642" text-anchor="middle" font-size="9.5" fill="#14B8A6">Producer</text>
+      <text x="1237" y="657" text-anchor="middle" font-size="9.5" fill="#14B8A6">Consumer</text>
+      <text x="1237" y="672" text-anchor="middle" font-size="9.5" fill="#14B8A6">SimpleConsumer</text>
+      <text x="1237" y="687" text-anchor="middle" font-size="9" fill="#0D9488">5.x 新协议</text>
+
+      <rect x="1315" y="604" width="135" height="86" rx="7" fill="#F0FDFA" stroke="#5EEAD4"/>
+      <text x="1382" y="624" text-anchor="middle" font-weight="700" fill="#0F766E">Remoting</text>
+      <text x="1382" y="642" text-anchor="middle" font-size="9.5" fill="#14B8A6">兼容 4.x</text>
+      <text x="1382" y="657" text-anchor="middle" font-size="9.5" fill="#14B8A6">Netty 协议</text>
+      <text x="1382" y="672" text-anchor="middle" font-size="9.5" fill="#14B8A6">透明转发</text>
+      <text x="1382" y="687" text-anchor="middle" font-size="9" fill="#0D9488">Bridge</text>
+
+      <rect x="1460" y="604" width="120" height="86" rx="7" fill="#F0FDFA" stroke="#5EEAD4"/>
+      <text x="1520" y="624" text-anchor="middle" font-weight="700" fill="#0F766E">扩展能力</text>
+      <text x="1520" y="642" text-anchor="middle" font-size="9.5" fill="#14B8A6">TLS/mTLS</text>
+      <text x="1520" y="657" text-anchor="middle" font-size="9.5" fill="#14B8A6">Auth 管道</text>
+      <text x="1520" y="672" text-anchor="middle" font-size="9.5" fill="#14B8A6">流量染色</text>
+      <text x="1520" y="687" text-anchor="middle" font-size="9" fill="#0D9488">可观测</text>
+    </g>
+  </g>
+
+  <!-- TieredStore -->
+  <g id="tieredstore">
+    <rect x="1150" y="726" width="450" height="170" rx="12" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2" filter="url(#shadow)"/>
+    <path d="M1150 738 a12 12 0 0 1 12 -12 h426 a12 12 0 0 1 12 12 v26 h-450 z" fill="url(#hdrSlate)"/>
+    <text x="1170" y="754" font-size="14" font-weight="700" fill="#FFFFFF">❄ TieredStore 分级存储</text>
+    <text x="1580" y="754" text-anchor="end" font-size="10.5" fill="#F1F5F9">冷热分离</text>
+    <g font-size="10">
+      <rect x="1170" y="782" width="200" height="100" rx="8" fill="#FEF3C7" stroke="#F59E0B"/>
+      <text x="1270" y="802" text-anchor="middle" font-weight="700" fill="#92400E">🔥 Hot 热存储</text>
+      <text x="1270" y="820" text-anchor="middle" font-size="9.5" fill="#B45309">本地 SSD / NVMe</text>
+      <text x="1270" y="836" text-anchor="middle" font-size="9.5" fill="#B45309">CommitLog + CQ</text>
+      <text x="1270" y="852" text-anchor="middle" font-size="9.5" fill="#B45309">高频访问 · 低延迟</text>
+      <text x="1270" y="870" text-anchor="middle" font-size="9" fill="#92400E">Cache 淘汰策略</text>
+
+      <rect x="1380" y="782" width="200" height="100" rx="8" fill="#DBEAFE" stroke="#3B82F6"/>
+      <text x="1480" y="802" text-anchor="middle" font-weight="700" fill="#1E3A8A">🧊 Cold 冷存储</text>
+      <text x="1480" y="820" text-anchor="middle" font-size="9.5" fill="#1E40AF">OSS / S3 对象存储</text>
+      <text x="1480" y="836" text-anchor="middle" font-size="9.5" fill="#1E40AF">CompactCQ 紧凑CQ</text>
+      <text x="1480" y="852" text-anchor="middle" font-size="9.5" fill="#1E40AF">冷数据自动沉降</text>
+      <text x="1480" y="870" text-anchor="middle" font-size="9" fill="#1E3A8A">成本优化</text>
+    </g>
+  </g>
+
+  <!-- HA & Replication -->
+  <g id="ha">
+    <rect x="1150" y="914" width="450" height="316" rx="12" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.2" filter="url(#shadow)"/>
+    <path d="M1150 926 a12 12 0 0 1 12 -12 h426 a12 12 0 0 1 12 12 v26 h-450 z" fill="url(#hdrRose)"/>
+    <text x="1170" y="942" font-size="14" font-weight="700" fill="#FFFFFF">🔄 HA &amp; Replication 高可用</text>
+    <text x="1580" y="942" text-anchor="end" font-size="10.5" fill="#FFE4E6">主从复制</text>
+    <g font-size="10">
+      <!-- Master/Slave diagram -->
+      <rect x="1170" y="970" width="190" height="100" rx="8" fill="#FEF2F2" stroke="#F87171"/>
+      <text x="1265" y="990" text-anchor="middle" font-weight="700" fill="#991B1B">Master Broker</text>
+      <text x="1265" y="1006" text-anchor="middle" font-size="9.5" fill="#B91C1C">CommitLog.write</text>
+      <text x="1265" y="1020" text-anchor="middle" font-size="9.5" fill="#B91C1C">HAService.push</text>
+      <text x="1265" y="1034" text-anchor="middle" font-size="9.5" fill="#B91C1C">WriteSocketService:256</text>
+      <text x="1265" y="1048" text-anchor="middle" font-size="9.5" fill="#B91C1C">ReadSocketService:137</text>
+      <text x="1265" y="1064" text-anchor="middle" font-size="9" fill="#991B1B">Header: 8B offset+4B size</text>
+
+      <rect x="1390" y="970" width="190" height="100" rx="8" fill="#FEF2F2" stroke="#F87171"/>
+      <text x="1485" y="990" text-anchor="middle" font-weight="700" fill="#991B1B">Slave Broker</text>
+      <text x="1485" y="1006" text-anchor="middle" font-size="9.5" fill="#B91C1C">HAConnection.receive</text>
+      <text x="1485" y="1020" text-anchor="middle" font-size="9.5" fill="#B91C1C">CommitLog.append</text>
+      <text x="1485" y="1034" text-anchor="middle" font-size="9.5" fill="#B91C1C">SlaveSynchronize.syncAll:65</text>
+      <text x="1485" y="1048" text-anchor="middle" font-size="9.5" fill="#B91C1C">TopicConfig/Offset</text>
+      <text x="1485" y="1064" text-anchor="middle" font-size="9" fill="#991B1B">DelayOffset/TimerMetrics</text>
+
+      <!-- sync arrow -->
+      <path d="M1360 1020 L1390 1020" stroke="#E11D48" stroke-width="2" marker-end="url(#arrRose)"/>
+      <text x="1375" y="1012" text-anchor="middle" font-size="9" fill="#E11D48">sync</text>
+
+      <rect x="1170" y="1080" width="410" height="68" rx="7" fill="#FFF1F2" stroke="#FDA4AF"/>
+      <text x="1375" y="1100" text-anchor="middle" font-weight="700" fill="#9F1239">GroupTransferService:46</text>
+      <text x="1375" y="1116" text-anchor="middle" font-size="9.5" fill="#BE123C">双缓冲 requestsWrite / requestsRead · 10ms 循环</text>
+      <text x="1375" y="1132" text-anchor="middle" font-size="9.5" fill="#BE123C">等待 Slave ACK → 推进 push2SlaveMaxOffset → 唤醒 Producer</text>
+
+      <rect x="1170" y="1156" width="410" height="62" rx="7" fill="#FFF1F2" stroke="#FDA4AF"/>
+      <text x="1375" y="1175" text-anchor="middle" font-weight="700" fill="#9F1239">两种 HA 模式</text>
+      <text x="1375" y="1191" text-anchor="middle" font-size="9.5" fill="#BE123C">① 传统 Master-Slave (同步/异步复制)</text>
+      <text x="1375" y="1207" text-anchor="middle" font-size="9.5" fill="#BE123C">② Controller 模式 (自动选主 · 无感切换)</text>
+    </g>
+  </g>
+
+  <!-- ============ CONNECTIONS ============ -->
+  <g id="connections" fill="none">
+    <!-- Producer -> NameServer (route) -->
+    <path d="M470 180 C 510 180, 510 180, 545 200" stroke="#94A3B8" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrDash)"/>
+    <text x="510" y="172" font-size="9.5" fill="#64748B">路由发现</text>
+
+    <!-- Producer -> Broker SendMessageProcessor -->
+    <path d="M255 350 L255 380 L140 380 L140 424" stroke="#2563EB" stroke-width="2.2" marker-end="url(#arrBlue)"/>
+    <text x="60" y="370" font-size="10" fill="#2563EB" font-weight="600">send</text>
+
+    <!-- Consumer -> NameServer (route) -->
+    <path d="M1140 200 C 1100 200, 1100 200, 1065 220" stroke="#94A3B8" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrDash)"/>
+    <text x="1075" y="172" font-size="9.5" fill="#64748B">路由发现</text>
+
+    <!-- Consumer -> Broker Pull/Pop -->
+    <path d="M1300 350 L1300 380 L312 380 L312 424" stroke="#DB2777" stroke-width="2.2" marker-end="url(#arrPink)"/>
+    <text x="1080" y="370" font-size="10" fill="#DB2777" font-weight="600">pull / pop</text>
+
+    <!-- NameServer <-> Broker (heartbeat) -->
+    <path d="M795 290 L795 350" stroke="#6366F1" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arr)" marker-start="url(#arr)"/>
+    <text x="803" y="322" font-size="9.5" fill="#6366F1">心跳/注册 30s</text>
+
+    <!-- Broker store -> TieredStore -->
+    <path d="M1120 810 C 1140 810, 1140 820, 1150 820" stroke="#64748B" stroke-width="1.8" marker-end="url(#arr)"/>
+    <text x="1075" y="800" font-size="9" fill="#64748B">沉降</text>
+
+    <!-- Broker <-> Controller -->
+    <path d="M1120 440 L1150 440" stroke="#7C3AED" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+    <text x="1050" y="432" font-size="9.5" fill="#7C3AED">注册/选主</text>
+
+    <!-- Proxy -> Broker -->
+    <path d="M1150 628 C 1140 628, 1140 460, 1110 460" stroke="#14B8A6" stroke-width="1.8" marker-end="url(#arr)"/>
+    <text x="1110" y="540" font-size="9.5" fill="#0D9488">转发</text>
+
+    <!-- Store -> HA -->
+    <path d="M1120 940 L1150 940" stroke="#E11D48" stroke-width="1.8" marker-end="url(#arrRose)"/>
+    <text x="1055" y="932" font-size="9.5" fill="#E11D48">复制流</text>
+
+    <!-- L1 -> L2 (Hook chain) internal flow -->
+    <path d="M140 508 L140 554" stroke="#A78BFA" stroke-width="1.4" stroke-dasharray="3 3"/>
+    <path d="M828 508 L828 554" stroke="#A78BFA" stroke-width="1.4" stroke-dasharray="3 3"/>
+
+    <!-- L2 -> L3 -->
+    <path d="M470 710 L470 754" stroke="#34D399" stroke-width="1.4" stroke-dasharray="3 3"/>
+    <path d="M728 710 L728 754" stroke="#34D399" stroke-width="1.4" stroke-dasharray="3 3"/>
+
+    <!-- L3 -> L4 -->
+    <path d="M160 850 L160 892" stroke="#94A3B8" stroke-width="1.4" stroke-dasharray="3 3"/>
+    <path d="M376 850 L376 892" stroke="#94A3B8" stroke-width="1.4" stroke-dasharray="3 3"/>
+    <path d="M592 850 L920 892" stroke="#94A3B8" stroke-width="1.4" stroke-dasharray="3 3"/>
+  </g>
+
+  <!-- ============ LEGEND ============ -->
+  <g id="legend">
+    <rect x="40" y="1200" width="1080" height="60" rx="10" fill="#FFFFFF" stroke="#E2E8F0"/>
+    <text x="60" y="1222" font-size="11" font-weight="700" fill="#0F172A">图例 Legend</text>
+    <g font-size="10" fill="#475569">
+      <line x1="60" y1="1242" x2="100" y2="1242" stroke="#2563EB" stroke-width="2.2" marker-end="url(#arrBlue)"/>
+      <text x="106" y="1246">Producer 发送</text>
+
+      <line x1="210" y1="1242" x2="250" y2="1242" stroke="#DB2777" stroke-width="2.2" marker-end="url(#arrPink)"/>
+      <text x="256" y="1246">Consumer 消费</text>
+
+      <line x1="370" y1="1242" x2="410" y2="1242" stroke="#6366F1" stroke-width="1.8" stroke-dasharray="5 4"/>
+      <text x="416" y="1246">控制面 / 心跳</text>
+
+      <line x1="540" y1="1242" x2="580" y2="1242" stroke="#E11D48" stroke-width="1.8" marker-end="url(#arrRose)"/>
+      <text x="586" y="1246">HA 复制</text>
+
+      <line x1="690" y1="1242" x2="730" y2="1242" stroke="#14B8A6" stroke-width="1.8" marker-end="url(#arr)"/>
+      <text x="736" y="1246">Proxy 转发</text>
+
+      <line x1="840" y1="1242" x2="880" y2="1242" stroke="#94A3B8" stroke-width="1.4" stroke-dasharray="3 3"/>
+      <text x="886" y="1246">内部 dispatch</text>
+    </g>
+  </g>
+
+  <!-- footer signature -->
+  <text x="1600" y="1272" text-anchor="end" font-size="9" fill="#94A3B8" font-style="italic">Source-based diagram · RocketMQ 5.5.0 develop branch · 27 broker sub-packages</text>
+</svg>
