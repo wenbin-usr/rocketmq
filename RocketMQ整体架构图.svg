@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 1410" font-family="'PingFang SC','Microsoft YaHei','Helvetica Neue',Helvetica,Arial,sans-serif">
+  <defs>
+    <linearGradient id="pageBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef3f8"/>
+      <stop offset="1" stop-color="#e3ebf4"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="aData" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="aCtrl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+    <marker id="aHA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d97706"/>
+    </marker>
+    <marker id="aThin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <style>
+    text { fill:#334155; }
+    .title { font-size:32px; font-weight:700; fill:#0f172a; }
+    .sub { font-size:13px; fill:#64748b; }
+    .hdr { font-size:14px; font-weight:700; }
+    .b { font-size:12px; }
+    .bs { font-size:11px; fill:#64748b; }
+    .lbl { font-size:11px; font-weight:600; fill:#475569; }
+    .note { font-size:11px; fill:#64748b; font-style:italic; }
+    .mono { font-size:11px; fill:#64748b; font-family:'SF Mono',Menlo,Consolas,monospace; }
+  </style>
+
+  <rect x="0" y="0" width="1680" height="1410" fill="url(#pageBg)"/>
+
+  <!-- ===================== TITLE ===================== -->
+  <text class="title" x="840" y="42" text-anchor="middle">RocketMQ 整体架构图（5.x）</text>
+  <text class="sub" x="840" y="66" text-anchor="middle">基于源码模块 · broker · store · namesrv · client · proxy · controller · remoting · common · filter · tieredstore</text>
+
+  <!-- ===================== L1 客户端层 ===================== -->
+  <!-- Producer -->
+  <g>
+    <rect x="380" y="100" width="440" height="140" rx="12" fill="#fff" stroke="#2563eb" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M380,112 A12,12 0 0 1 392,100 L808,100 A12,12 0 0 1 820,112 L820,128 L380,128 Z" fill="#2563eb" fill-opacity="0.13"/>
+    <text class="hdr" x="394" y="119" fill="#1d4ed8">生产者 Producer  ·  client 模块</text>
+    <text class="b" x="394" y="150">DefaultMQProducer  ·  TransactionMQProducer</text>
+    <text class="b" x="394" y="170">发送方式：同步 invokeSync / 异步 invokeAsync / 单向 invokeOneway / 批量</text>
+    <text class="b" x="394" y="190">路由缓存 + 故障延迟 LatencyFaultTolerance（隔离慢 Broker）</text>
+    <text class="b" x="394" y="210">MQClientInstance：心跳 30s · 路由更新 30s · 单例复用</text>
+  </g>
+
+  <!-- Consumer -->
+  <g>
+    <rect x="850" y="100" width="440" height="140" rx="12" fill="#fff" stroke="#2563eb" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M850,112 A12,12 0 0 1 862,100 L1278,100 A12,12 0 0 1 1290,112 L1290,128 L850,128 Z" fill="#2563eb" fill-opacity="0.13"/>
+    <text class="hdr" x="864" y="119" fill="#1d4ed8">消费者 Consumer  ·  client 模块</text>
+    <text class="b" x="864" y="150">Push / LitePull / Pop Consumer（5.x）</text>
+    <text class="b" x="864" y="170">Rebalance 分配队列 20s  ·  ProcessQueue</text>
+    <text class="b" x="864" y="190">OffsetStore：本地（广播）/ 远程 Broker（集群）</text>
+    <text class="b" x="864" y="210">顺序消费 / 并发消费  ·  At-Least-Once（业务需幂等）</text>
+  </g>
+
+  <!-- ===================== L2 接入层 ===================== -->
+  <g>
+    <rect x="370" y="290" width="940" height="100" rx="12" fill="#fff" stroke="#7c3aed" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M370,302 A12,12 0 0 1 382,290 L1298,290 A12,12 0 0 1 1310,302 L1310,318 L370,318 Z" fill="#7c3aed" fill-opacity="0.13"/>
+    <text class="hdr" x="384" y="309" fill="#6d28d9">接入层 Access Layer  ·  proxy / remoting 模块</text>
+    <rect x="388" y="326" width="455" height="54" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="400" y="348" fill="#6d28d9">gRPC Proxy（5.x）</text>
+    <text class="bs" x="500" y="348">ProxyMode LOCAL / CLUSTER</text>
+    <text class="bs" x="400" y="368">多语言 gRPC 客户端 → Remoting 转发至 Broker</text>
+    <rect x="857" y="326" width="437" height="54" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="869" y="348" fill="#6d28d9">Remoting 协议（Netty）</text>
+    <text class="bs" x="1003" y="348">RemotingCommand 二进制</text>
+    <text class="bs" x="869" y="368">旧 Java SDK 直连 Broker · invokeSync/Async/Oneway</text>
+  </g>
+
+  <!-- ===================== L3 NameServer 路由中心（左侧面板） ===================== -->
+  <g>
+    <rect x="40" y="150" width="290" height="480" rx="12" fill="#fff" stroke="#059669" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M40,162 A12,12 0 0 1 52,150 L318,150 A12,12 0 0 1 330,162 L330,178 L40,178 Z" fill="#059669" fill-opacity="0.13"/>
+    <text class="hdr" x="54" y="169" fill="#047857">NameServer 路由中心</text>
+    <text class="bs" x="54" y="196" fill="#047857">namesrv 模块</text>
+    <text class="b" x="54" y="220">去中心化 · 节点互不通信</text>
+    <text class="b" x="54" y="246" font-weight="700" fill="#047857">RouteInfoManager</text>
+    <text class="mono" x="66" y="264">topicQueueTable</text>
+    <text class="mono" x="66" y="282">brokerAddrTable</text>
+    <text class="mono" x="66" y="300">clusterAddrTable</text>
+    <text class="mono" x="66" y="318">brokerLiveTable</text>
+    <text class="b" x="54" y="346" font-weight="700" fill="#047857">Broker 心跳注册 30s</text>
+    <text class="mono" x="66" y="364">REGISTER_BROKER</text>
+    <text class="b" x="54" y="392" font-weight="700" fill="#047857">scanNotActiveBroker 10s</text>
+    <text class="b" x="54" y="410">超时 120s 剔除并注销</text>
+    <text class="b" x="54" y="438" font-weight="700" fill="#047857">客户端路由发现 30s</text>
+    <text class="mono" x="66" y="456">GET_ROUTEINFO_BY_TOPIC</text>
+    <text class="b" x="54" y="474">→ QueueData + BrokerData</text>
+    <text class="bs" x="54" y="502" fill="#047857">NamesrvStartup · NamesrvController</text>
+    <text class="bs" x="54" y="518">默认端口 9876</text>
+    <text class="note" x="54" y="612">任一节点存活即可提供路由</text>
+  </g>
+
+  <!-- ===================== L3 Controller 控制器（右侧面板） ===================== -->
+  <g>
+    <rect x="1350" y="430" width="290" height="330" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M1350,442 A12,12 0 0 1 1362,430 L1628,430 A12,12 0 0 1 1640,442 L1640,458 L1350,458 Z" fill="#d97706" fill-opacity="0.13"/>
+    <text class="hdr" x="1364" y="449" fill="#b45309">Controller 控制器（5.x）</text>
+    <text class="bs" x="1364" y="476" fill="#b45309">controller 模块</text>
+    <text class="b" x="1364" y="500">基于 DLedger Raft</text>
+    <text class="b" x="1364" y="518">Controller 集群自身高可用</text>
+    <text class="b" x="1364" y="546" font-weight="700" fill="#b45309">自动主从切换</text>
+    <text class="b" x="1364" y="564">替代人工 / ZooKeeper</text>
+    <text class="b" x="1364" y="592" font-weight="700" fill="#b45309">ReplicasManager（Broker 端）</text>
+    <text class="mono" x="1376" y="610">ALTER_SYNC_STATE_SET</text>
+    <text class="b" x="1364" y="638">minInSyncReplicas</text>
+    <text class="b" x="1364" y="656">allAckInSyncStateSet</text>
+    <text class="b" x="1364" y="684" font-weight="700" fill="#b45309">Master 宕机 →</text>
+    <text class="b" x="1364" y="702">自动选举新 Master</text>
+    <text class="b" x="1364" y="720">持续对外服务</text>
+    <text class="note" x="1364" y="748">可选 · enableControllerMode</text>
+  </g>
+
+  <!-- ===================== L4 Broker 集群 ===================== -->
+  <g>
+    <rect x="370" y="430" width="940" height="330" rx="12" fill="#fff" stroke="#4338ca" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M370,442 A12,12 0 0 1 382,430 L1298,430 A12,12 0 0 1 1310,442 L1310,458 L370,458 Z" fill="#4338ca" fill-opacity="0.13"/>
+    <text class="hdr" x="384" y="449" fill="#3730a3">Broker 集群  ·  broker 模块  —  消息存储与转发服务器</text>
+
+    <!-- Group A -->
+    <rect x="390" y="470" width="450" height="155" rx="8" fill="#f8fafc" stroke="#4338ca" stroke-width="1" stroke-opacity="0.3"/>
+    <text class="b" font-weight="700" x="402" y="490" fill="#3730a3">Broker-Group-A</text>
+    <rect x="405" y="500" width="190" height="110" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="1" stroke-opacity="0.45"/>
+    <text class="b" font-weight="700" x="500" y="524" text-anchor="middle" fill="#3730a3">Master broker-a</text>
+    <text class="bs" x="500" y="544" text-anchor="middle">brokerId = 0</text>
+    <text class="bs" x="500" y="562" text-anchor="middle">读写服务</text>
+    <text class="bs" x="500" y="580" text-anchor="middle">NettyRemotingServer</text>
+    <rect x="620" y="500" width="205" height="50" rx="8" fill="#f8fafc" stroke="#64748b" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="bs" font-weight="700" x="722" y="520" text-anchor="middle" fill="#475569">Slave 1（id=1）</text>
+    <text class="bs" x="722" y="538" text-anchor="middle">只读 + HA 同步</text>
+    <rect x="620" y="560" width="205" height="50" rx="8" fill="#f8fafc" stroke="#64748b" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="bs" font-weight="700" x="722" y="580" text-anchor="middle" fill="#475569">Slave 2（id=2）</text>
+    <text class="bs" x="722" y="598" text-anchor="middle">只读 + HA 同步</text>
+
+    <!-- Group B -->
+    <rect x="860" y="470" width="440" height="155" rx="8" fill="#f8fafc" stroke="#4338ca" stroke-width="1" stroke-opacity="0.3"/>
+    <text class="b" font-weight="700" x="872" y="490" fill="#3730a3">Broker-Group-B</text>
+    <rect x="875" y="500" width="190" height="110" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="1" stroke-opacity="0.45"/>
+    <text class="b" font-weight="700" x="970" y="524" text-anchor="middle" fill="#3730a3">Master broker-b</text>
+    <text class="bs" x="970" y="544" text-anchor="middle">brokerId = 0</text>
+    <text class="bs" x="970" y="562" text-anchor="middle">读写服务</text>
+    <text class="bs" x="970" y="580" text-anchor="middle">NettyRemotingServer</text>
+    <rect x="1090" y="500" width="205" height="110" rx="8" fill="#f8fafc" stroke="#64748b" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="bs" font-weight="700" x="1192" y="528" text-anchor="middle" fill="#475569">Slave 1（id=1）</text>
+    <text class="bs" x="1192" y="548" text-anchor="middle">只读 + HA 同步</text>
+    <text class="bs" x="1192" y="568" text-anchor="middle">故障切换候选</text>
+    <text class="bs" x="1192" y="588" text-anchor="middle">默认端口 10911 / VIP 10909</text>
+
+    <!-- HA 同步箭头 -->
+    <path d="M595,525 L616,525" stroke="#d97706" stroke-width="1.8" fill="none" marker-end="url(#aHA)"/>
+    <path d="M595,585 L616,585" stroke="#d97706" stroke-width="1.8" fill="none" marker-end="url(#aHA)"/>
+    <path d="M1065,555 L1086,555" stroke="#d97706" stroke-width="1.8" fill="none" marker-end="url(#aHA)"/>
+    <text class="lbl" x="595" y="516" fill="#b45309">HA</text>
+
+    <!-- 信息条 -->
+    <rect x="390" y="638" width="300" height="112" rx="8" fill="#f8fafc" stroke="#4338ca" stroke-width="1" stroke-opacity="0.35"/>
+    <text class="bs" font-weight="700" x="402" y="658" fill="#3730a3">请求处理器 Processor</text>
+    <text class="bs" x="402" y="678">SendMessageProcessor　发送</text>
+    <text class="bs" x="402" y="696">PullMessageProcessor　拉取</text>
+    <text class="bs" x="402" y="714">HeartbeatProcessor　心跳</text>
+    <text class="bs" x="402" y="732">EndTransactionProcessor　事务</text>
+
+    <rect x="700" y="638" width="300" height="112" rx="8" fill="#f8fafc" stroke="#4338ca" stroke-width="1" stroke-opacity="0.35"/>
+    <text class="bs" font-weight="700" x="712" y="658" fill="#3730a3">核心服务 Service</text>
+    <text class="bs" x="712" y="678">TransactionalMessageService</text>
+    <text class="bs" x="712" y="696">ScheduleMessageService　4.x 延迟</text>
+    <text class="bs" x="712" y="714">TimerMessageStore　5.x 定时</text>
+    <text class="bs" x="712" y="732">PopMessageProcessor　5.x Pop</text>
+
+    <rect x="1010" y="638" width="290" height="112" rx="8" fill="#f8fafc" stroke="#4338ca" stroke-width="1" stroke-opacity="0.35"/>
+    <text class="bs" font-weight="700" x="1022" y="658" fill="#3730a3">管理器 Manager</text>
+    <text class="bs" x="1022" y="678">TopicConfigManager　Topic 配置</text>
+    <text class="bs" x="1022" y="696">ConsumerOffsetManager　消费位点</text>
+    <text class="bs" x="1022" y="714">SubscriptionGroupManager　订阅组</text>
+    <text class="bs" x="1022" y="732">Consumer/ProducerManager　连接</text>
+  </g>
+
+  <!-- ===================== L5 存储引擎 ===================== -->
+  <g>
+    <rect x="370" y="800" width="940" height="180" rx="12" fill="#fff" stroke="#be123c" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M370,812 A12,12 0 0 1 382,800 L1298,800 A12,12 0 0 1 1310,812 L1310,828 L370,828 Z" fill="#be123c" fill-opacity="0.13"/>
+    <text class="hdr" x="384" y="819" fill="#9f1239">存储引擎 Store Engine  ·  store 模块  —  DefaultMessageStore</text>
+
+    <!-- 行1 -->
+    <rect x="385" y="838" width="220" height="68" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="495" y="858" text-anchor="middle" fill="#9f1239">CommitLog</text>
+    <text class="bs" x="495" y="877" text-anchor="middle">顺序写 · mmap 零拷贝</text>
+    <text class="bs" x="495" y="894" text-anchor="middle">1GB/文件 · 混合存储</text>
+
+    <rect x="615" y="838" width="220" height="68" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="725" y="858" text-anchor="middle" fill="#9f1239">ReputMessageService</text>
+    <text class="bs" x="725" y="877" text-anchor="middle">异步分发（每 ms）</text>
+    <text class="bs" x="725" y="894" text-anchor="middle">最终一致 · 构建索引</text>
+
+    <rect x="845" y="838" width="220" height="68" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="955" y="858" text-anchor="middle" fill="#9f1239">ConsumeQueue</text>
+    <text class="bs" x="955" y="877" text-anchor="middle">逻辑索引 20B/条</text>
+    <text class="bs" x="955" y="894" text-anchor="middle">{topic}/{queueId}</text>
+
+    <rect x="1075" y="838" width="230" height="68" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="1190" y="858" text-anchor="middle" fill="#9f1239">IndexService</text>
+    <text class="bs" x="1190" y="877" text-anchor="middle">哈希索引</text>
+    <text class="bs" x="1190" y="894" text-anchor="middle">按 key / msgId 查询</text>
+
+    <!-- 行2 -->
+    <rect x="385" y="914" width="175" height="60" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="472" y="934" text-anchor="middle" fill="#9f1239">HAService</text>
+    <text class="bs" x="472" y="951" text-anchor="middle">主从同步 10912</text>
+    <text class="bs" x="472" y="967" text-anchor="middle">同步双写/异步复制</text>
+
+    <rect x="568" y="914" width="175" height="60" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="655" y="934" text-anchor="middle" fill="#9f1239">FlushManager</text>
+    <text class="bs" x="655" y="951" text-anchor="middle">同步/异步刷盘</text>
+    <text class="bs" x="655" y="967" text-anchor="middle">GroupCommit 批量</text>
+
+    <rect x="751" y="914" width="180" height="60" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="841" y="934" text-anchor="middle" fill="#9f1239">TimerMessageStore</text>
+    <text class="bs" x="841" y="951" text-anchor="middle">5.x 时间轮</text>
+    <text class="bs" x="841" y="967" text-anchor="middle">任意时刻定时</text>
+
+    <rect x="939" y="914" width="175" height="60" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="1026" y="934" text-anchor="middle" fill="#9f1239">TieredStore</text>
+    <text class="bs" x="1026" y="951" text-anchor="middle">5.x 分级存储</text>
+    <text class="bs" x="1026" y="967" text-anchor="middle">冷数据 → S3/OSS</text>
+
+    <rect x="1122" y="914" width="183" height="60" rx="8" fill="#fff1f2" stroke="#be123c" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="1213" y="934" text-anchor="middle" fill="#9f1239">RocksDBMessageStore</text>
+    <text class="bs" x="1213" y="951" text-anchor="middle">5.x 可选</text>
+    <text class="bs" x="1213" y="967" text-anchor="middle">CQ 元数据下沉</text>
+
+    <!-- 存储内部箭头 -->
+    <path d="M605,872 L613,872" stroke="#94a3b8" stroke-width="1.4" fill="none" marker-end="url(#aThin)"/>
+    <path d="M835,868 L843,868" stroke="#94a3b8" stroke-width="1.4" fill="none" marker-end="url(#aThin)"/>
+    <path d="M835,860 L835,832 L1190,832 L1190,836" stroke="#94a3b8" stroke-width="1.2" fill="none" stroke-dasharray="3 3" marker-end="url(#aThin)"/>
+  </g>
+
+  <!-- ===================== L6 物理文件 ===================== -->
+  <g>
+    <rect x="370" y="1010" width="940" height="120" rx="12" fill="#fff" stroke="#475569" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M370,1022 A12,12 0 0 1 382,1010 L1298,1010 A12,12 0 0 1 1310,1022 L1310,1038 L370,1038 Z" fill="#475569" fill-opacity="0.13"/>
+    <text class="hdr" x="384" y="1029" fill="#334155">物理文件 Physical Files  ·  ${user.home}/store/</text>
+
+    <rect x="385" y="1048" width="180" height="72" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="475" y="1068" text-anchor="middle" fill="#334155">commitlog/</text>
+    <text class="bs" x="475" y="1086" text-anchor="middle">1GB/文件</text>
+    <text class="bs" x="475" y="1103" text-anchor="middle">文件名=起始 offset</text>
+
+    <rect x="575" y="1048" width="180" height="72" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="665" y="1068" text-anchor="middle" fill="#334155">consumequeue/</text>
+    <text class="bs" x="665" y="1086" text-anchor="middle">{topic}/{queueId}/</text>
+    <text class="bs" x="665" y="1103" text-anchor="middle">30 万条 × 20B</text>
+
+    <rect x="765" y="1048" width="170" height="72" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="850" y="1068" text-anchor="middle" fill="#334155">index/</text>
+    <text class="bs" x="850" y="1086" text-anchor="middle">500 万 slot</text>
+    <text class="bs" x="850" y="1103" text-anchor="middle">2000 万 index</text>
+
+    <rect x="945" y="1048" width="170" height="72" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="1030" y="1068" text-anchor="middle" fill="#334155">config/</text>
+    <text class="bs" x="1030" y="1086" text-anchor="middle">topics.json</text>
+    <text class="bs" x="1030" y="1103" text-anchor="middle">consumerOffset.json</text>
+
+    <rect x="1125" y="1048" width="180" height="72" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1" stroke-opacity="0.4"/>
+    <text class="b" font-weight="700" x="1215" y="1068" text-anchor="middle" fill="#334155">checkpoint · timerlog</text>
+    <text class="bs" x="1215" y="1086" text-anchor="middle">刷盘检查点</text>
+    <text class="bs" x="1215" y="1103" text-anchor="middle">timerwheel 时间轮</text>
+  </g>
+
+  <!-- ===================== 通信层基础条 ===================== -->
+  <g>
+    <rect x="40" y="1160" width="1600" height="60" rx="12" fill="#fff" stroke="#0284c7" stroke-width="1.4" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <path d="M40,1172 A12,12 0 0 1 52,1160 L1628,1160 A12,12 0 0 1 1640,1172 L1640,1188 L40,1188 Z" fill="#0284c7" fill-opacity="0.13"/>
+    <text class="hdr" x="840" y="1180" text-anchor="middle" fill="#0369a1">底层通信层  remoting 模块  —  基于 Netty 的 RemotingCommand 二进制协议</text>
+    <text class="bs" x="840" y="1206" text-anchor="middle">invokeSync / invokeAsync / invokeOneway  ·  RequestCode 路由分派线程池  ·  Client / Broker / NameServer / Controller / Proxy 共用</text>
+  </g>
+
+  <!-- ===================== 连接箭头 ===================== -->
+  <!-- 发送/拉取（数据流，实线） -->
+  <path d="M600,240 L600,290" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#aData)"/>
+  <path d="M600,390 L600,430" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#aData)"/>
+  <text class="lbl" x="608" y="268">发送 SEND_MESSAGE</text>
+
+  <path d="M1070,240 L1070,290" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#aData)"/>
+  <path d="M1070,390 L1070,430" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#aData)"/>
+  <text class="lbl" x="1078" y="268">拉取 PULL / POP</text>
+
+  <!-- Broker → Store → Files -->
+  <path d="M840,760 L840,800" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#aData)"/>
+  <text class="lbl" x="848" y="784">asyncPutMessage 写入</text>
+  <path d="M840,980 L840,1010" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#aData)"/>
+  <text class="lbl" x="848" y="1000">mmap 落盘</text>
+
+  <!-- 控制/路由（虚线） -->
+  <path d="M378,170 L332,170" stroke="#64748b" stroke-width="1.6" fill="none" stroke-dasharray="6 4" marker-end="url(#aCtrl)"/>
+  <text class="lbl" x="345" y="160" text-anchor="end">路由发现 30s</text>
+  <text class="bs" x="345" y="184" text-anchor="end">Producer / Consumer</text>
+
+  <path d="M378,500 L332,500" stroke="#64748b" stroke-width="1.6" fill="none" stroke-dasharray="6 4" marker-end="url(#aCtrl)"/>
+  <text class="lbl" x="345" y="490" text-anchor="end">心跳注册 30s</text>
+  <text class="bs" x="345" y="514" text-anchor="end">REGISTER_BROKER</text>
+
+  <path d="M1310,500 L1350,500" stroke="#64748b" stroke-width="1.6" fill="none" stroke-dasharray="6 4" marker-end="url(#aCtrl)" marker-start="url(#aCtrl)"/>
+  <text class="lbl" x="1330" y="490" text-anchor="middle">副本状态 / 自动选主</text>
+  <text class="bs" x="1330" y="514" text-anchor="middle">ALTER_SYNC_STATE_SET</text>
+
+  <!-- ===================== 图例 ===================== -->
+  <g>
+    <rect x="40" y="1240" width="1600" height="155" rx="12" fill="#fff" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+    <path d="M40,1252 A12,12 0 0 1 52,1240 L1628,1240 A12,12 0 0 1 1640,1252 L1640,1268 L40,1268 Z" fill="#64748b" fill-opacity="0.10"/>
+    <text class="hdr" x="54" y="1259" fill="#334155">图例 Legend</text>
+
+    <!-- 颜色色块 -->
+    <rect x="60" y="1288" width="16" height="16" rx="3" fill="#2563eb" fill-opacity="0.85"/>
+    <text class="bs" x="82" y="1300">客户端 Client</text>
+    <rect x="220" y="1288" width="16" height="16" rx="3" fill="#7c3aed" fill-opacity="0.85"/>
+    <text class="bs" x="242" y="1300">接入层 Access</text>
+    <rect x="380" y="1288" width="16" height="16" rx="3" fill="#059669" fill-opacity="0.85"/>
+    <text class="bs" x="402" y="1300">路由中心 NameServer</text>
+    <rect x="560" y="1288" width="16" height="16" rx="3" fill="#d97706" fill-opacity="0.85"/>
+    <text class="bs" x="582" y="1300">控制器 Controller</text>
+    <rect x="720" y="1288" width="16" height="16" rx="3" fill="#4338ca" fill-opacity="0.85"/>
+    <text class="bs" x="742" y="1300">Broker 集群</text>
+    <rect x="880" y="1288" width="16" height="16" rx="3" fill="#be123c" fill-opacity="0.85"/>
+    <text class="bs" x="902" y="1300">存储引擎 Store</text>
+    <rect x="1040" y="1288" width="16" height="16" rx="3" fill="#475569" fill-opacity="0.85"/>
+    <text class="bs" x="1062" y="1300">物理文件 Files</text>
+    <rect x="1200" y="1288" width="16" height="16" rx="3" fill="#0284c7" fill-opacity="0.85"/>
+    <text class="bs" x="1222" y="1300">通信层 remoting</text>
+
+    <!-- 箭头类型 -->
+    <path d="M60,1335 L120,1335" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#aData)"/>
+    <text class="bs" x="130" y="1339">数据流：发送 / 拉取 / 写入落盘</text>
+    <path d="M460,1335 L520,1335" stroke="#64748b" stroke-width="1.6" fill="none" stroke-dasharray="6 4" marker-end="url(#aCtrl)"/>
+    <text class="bs" x="530" y="1339">控制·路由：注册 / 路由发现 / 选主</text>
+    <path d="M900,1335 L960,1335" stroke="#d97706" stroke-width="2" fill="none" marker-end="url(#aHA)"/>
+    <text class="bs" x="970" y="1339">HA 主从同步（Master → Slave）</text>
+    <path d="M1280,1335 L1340,1335" stroke="#94a3b8" stroke-width="1.4" fill="none" stroke-dasharray="3 3" marker-end="url(#aThin)"/>
+    <text class="bs" x="1350" y="1339">存储内部分发</text>
+
+    <text class="note" x="60" y="1372">关键时序：Broker→NameServer 心跳 30s  ·  客户端路由更新 30s  ·  Rebalance 20s  ·  消费位点持久化 5s  ·  scanNotActiveBroker 10s（120s 剔除）</text>
+    <text class="note" x="60" y="1390">性能要点：CommitLog 顺序写 + mmap 零拷贝  ·  ConsumeQueue 索引分离  ·  异步刷盘 / GroupCommit  ·  TransientStorePool 堆外写  ·  5.x CompletableFuture 全面异步化</text>
+  </g>
+</svg>
