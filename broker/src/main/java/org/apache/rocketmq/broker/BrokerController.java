@@ -1155,7 +1155,11 @@ public class BrokerController {
 
     private boolean initLiteService() {
         this.liteEventDispatcher.init();
-        return this.liteLifecycleManager.init();
+        if (!this.liteLifecycleManager.init()) {
+            return false;
+        }
+        this.liteLifecycleManager.bootstrapLmqPrefixIndex();
+        return true;
     }
 
     public void registerProcessor() {
@@ -1558,6 +1562,7 @@ public class BrokerController {
             if (this.popLiteMessageProcessor.getPopLiteLongPollingService() != null) {
                 this.popLiteMessageProcessor.getPopLiteLongPollingService().shutdown();
             }
+            this.popLiteMessageProcessor.getConsumerOrderInfoManager().shutdown();
         }
 
         if (this.popMessageProcessor.getQueueLockManager() != null) {
@@ -2764,10 +2769,6 @@ public class BrokerController {
 
     public boolean isIsolated() {
         return this.isIsolated;
-    }
-
-    public TimerCheckpoint getTimerCheckpoint() {
-        return timerCheckpoint;
     }
 
     public TopicRouteInfoManager getTopicRouteInfoManager() {

@@ -257,8 +257,10 @@ public class DefaultAuthorizationContextBuilder implements AuthorizationContextB
                     }
                     break;
                 case RequestCode.VIEW_MESSAGE_BY_ID:
-                    topic = Resource.ofTopic(requireResource(fields.get(TOPIC), "topic"));
-                    result.add(DefaultAuthorizationContext.of(subject, topic, Action.GET, sourceIp));
+                    String viewTopic = requireResource(fields.get(TOPIC), "topic");
+                    Resource viewResource = NamespaceUtil.isRetryTopic(viewTopic)
+                        ? Resource.ofGroup(viewTopic) : Resource.ofTopic(viewTopic);
+                    result.add(DefaultAuthorizationContext.of(subject, viewResource, Action.GET, sourceIp));
                     break;
                 case RequestCode.CONSUMER_SEND_MSG_BACK:
                     group = Resource.ofGroup(requireResource(fields.get(GROUP), "consumer group"));
@@ -347,6 +349,9 @@ public class DefaultAuthorizationContextBuilder implements AuthorizationContextB
                         for (SubscriptionData subscriptionData : data.getSubscriptionDataSet()) {
                             if (subscriptionData == null) {
                                 throw new AuthorizationException("subscription is null.");
+                            }
+                            if (StringUtils.isBlank(subscriptionData.getTopic())) {
+                                continue;
                             }
                             String subscriptionTopic =
                                 requireResource(subscriptionData.getTopic(), "topic");
