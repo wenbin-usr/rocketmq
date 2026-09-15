@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 940" font-family="'Segoe UI','Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <!-- 浅色背景渐变 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7FAFC"/>
+      <stop offset="1" stop-color="#E9F0F6"/>
+    </linearGradient>
+
+    <!-- 各组件渐变 -->
+    <linearGradient id="gProducer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E3F2FD"/><stop offset="1" stop-color="#BBDEFB"/>
+    </linearGradient>
+    <linearGradient id="gConsumer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E0F7F4"/><stop offset="1" stop-color="#B2DFDB"/>
+    </linearGradient>
+    <linearGradient id="gNameSrv" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F3E5F5"/><stop offset="1" stop-color="#E1BEE7"/>
+    </linearGradient>
+    <linearGradient id="gProxy" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF3E0"/><stop offset="1" stop-color="#FFCC80"/>
+    </linearGradient>
+    <linearGradient id="gController" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FDECEA"/><stop offset="1" stop-color="#F5B7B1"/>
+    </linearGradient>
+    <linearGradient id="gMaster" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E8F5E9"/><stop offset="1" stop-color="#A5D6A7"/>
+    </linearGradient>
+    <linearGradient id="gSlave" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F1F8E9"/><stop offset="1" stop-color="#C5E1A5"/>
+    </linearGradient>
+    <linearGradient id="gStore" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ECEFF1"/><stop offset="1" stop-color="#CFD8DC"/>
+    </linearGradient>
+
+    <!-- 软阴影 -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#37474F" flood-opacity="0.18"/>
+    </filter>
+
+    <!-- 箭头标记 -->
+    <marker id="arrTCP" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#34495E"/>
+    </marker>
+    <marker id="arrTCP2" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#5D6D7E"/>
+    </marker>
+    <marker id="arrGRPC" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#E67E22"/>
+    </marker>
+    <marker id="arrHA" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#27AE60"/>
+    </marker>
+    <marker id="arrCtrl" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#C0392B"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1280" height="940" fill="url(#bg)"/>
+
+  <!-- 标题 -->
+  <text x="640" y="48" text-anchor="middle" font-size="26" font-weight="700" fill="#2C3E50">RocketMQ 通信架构图</text>
+  <text x="640" y="74" text-anchor="middle" font-size="13" fill="#7B8794">Apache RocketMQ 5.5.0  ·  Netty RemotingCommand (TCP) + gRPC (HTTP/2) + HA Service</text>
+
+  <!-- 层级背景条 -->
+  <g opacity="0.55">
+    <rect x="40" y="100" width="1200" height="120" rx="8" fill="#FFFFFF" stroke="#D5DBDB" stroke-dasharray="3 4"/>
+    <text x="58" y="120" font-size="11" font-weight="700" fill="#85929E" letter-spacing="2">CLIENT LAYER · 客户端层</text>
+
+    <rect x="40" y="252" width="1200" height="148" rx="8" fill="#FFFFFF" stroke="#D5DBDB" stroke-dasharray="3 4"/>
+    <text x="58" y="272" font-size="11" font-weight="700" fill="#85929E" letter-spacing="2">ROUTING / PROXY / CONTROLLER · 路由·代理·控制层</text>
+
+    <rect x="40" y="442" width="1200" height="180" rx="8" fill="#FFFFFF" stroke="#D5DBDB" stroke-dasharray="3 4"/>
+    <text x="58" y="462" font-size="11" font-weight="700" fill="#85929E" letter-spacing="2">BROKER LAYER · 服务端层</text>
+
+    <rect x="40" y="668" width="1200" height="120" rx="8" fill="#FFFFFF" stroke="#D5DBDB" stroke-dasharray="3 4"/>
+    <text x="58" y="688" font-size="11" font-weight="700" fill="#85929E" letter-spacing="2">STORAGE ENGINE · 存储引擎层</text>
+  </g>
+
+  <!-- ============= 客户端层 ============= -->
+  <g filter="url(#shadow)">
+    <rect x="180" y="130" width="240" height="86" rx="12" fill="url(#gProducer)" stroke="#2980B9" stroke-width="2"/>
+    <text x="300" y="160" text-anchor="middle" font-size="18" font-weight="700" fill="#1B4F72">Producer</text>
+    <text x="300" y="182" text-anchor="middle" font-size="12" fill="#21618C">消息生产者 (Netty Client)</text>
+    <text x="300" y="201" text-anchor="middle" font-size="11" fill="#5499C7" font-style="italic">DefaultMQProducer / DefaultMQProducerImpl</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="860" y="130" width="240" height="86" rx="12" fill="url(#gConsumer)" stroke="#16A085" stroke-width="2"/>
+    <text x="980" y="160" text-anchor="middle" font-size="18" font-weight="700" fill="#0B5345">Consumer</text>
+    <text x="980" y="182" text-anchor="middle" font-size="12" fill="#117864">消息消费者 (Netty Client)</text>
+    <text x="980" y="201" text-anchor="middle" font-size="11" fill="#148F77" font-style="italic">DefaultMQPushConsumer · Push / Pop / LitePull</text>
+  </g>
+
+  <!-- ============= 路由/代理/控制层 ============= -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="288" width="220" height="100" rx="12" fill="url(#gNameSrv)" stroke="#8E44AD" stroke-width="2"/>
+    <text x="210" y="318" text-anchor="middle" font-size="17" font-weight="700" fill="#4A235A">NameServer</text>
+    <text x="210" y="340" text-anchor="middle" font-size="12" fill="#6C3483">路由中心 (无状态集群)</text>
+    <text x="210" y="358" text-anchor="middle" font-size="11" fill="#8E44AD" font-style="italic">RouteInfoManager</text>
+    <text x="210" y="376" text-anchor="middle" font-size="10" fill="#7D3C98">registerBroker · pickupTopicRouteData</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="530" y="288" width="220" height="100" rx="12" fill="url(#gProxy)" stroke="#E67E22" stroke-width="2"/>
+    <text x="640" y="318" text-anchor="middle" font-size="17" font-weight="700" fill="#7E5109">Proxy</text>
+    <text x="640" y="340" text-anchor="middle" font-size="12" fill="#B9770E">5.x gRPC 代理层</text>
+    <text x="640" y="358" text-anchor="middle" font-size="11" fill="#CA6F1E" font-style="italic">MessagingProcessor / gRPC</text>
+    <text x="640" y="376" text-anchor="middle" font-size="10" fill="#B9770E">HTTP/2 · RemotingCommand 桥接</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="960" y="288" width="220" height="100" rx="12" fill="url(#gController)" stroke="#C0392B" stroke-width="2"/>
+    <text x="1070" y="318" text-anchor="middle" font-size="17" font-weight="700" fill="#641E16">Controller</text>
+    <text x="1070" y="340" text-anchor="middle" font-size="12" fill="#922B21">5.x 控制器 (DLedger)</text>
+    <text x="1070" y="358" text-anchor="middle" font-size="11" fill="#A93226" font-style="italic">自动选主 · 统一副本管理</text>
+    <text x="1070" y="376" text-anchor="middle" font-size="10" fill="#922B21">ReplicasManager · State 机</text>
+  </g>
+
+  <!-- ============= Broker 层 ============= -->
+  <g filter="url(#shadow)">
+    <rect x="180" y="478" width="400" height="128" rx="12" fill="url(#gMaster)" stroke="#1E8449" stroke-width="2"/>
+    <text x="380" y="508" text-anchor="middle" font-size="17" font-weight="700" fill="#145A32">Broker Master</text>
+    <text x="380" y="528" text-anchor="middle" font-size="12" fill="#196F3D">服务端主节点 (RemotingCommand Server)</text>
+    <text x="380" y="548" text-anchor="middle" font-size="11" fill="#229954" font-style="italic">BrokerController · SendMessageProcessor · PullMessageProcessor</text>
+    <text x="380" y="566" text-anchor="middle" font-size="11" fill="#229954" font-style="italic">PopMessageProcessor · AckMessageProcessor · EndTransactionProcessor</text>
+    <text x="380" y="586" text-anchor="middle" font-size="10" fill="#1E8449">NettyRemotingServer · Processor · PullRequestHoldService · ScheduleMessageService</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="700" y="478" width="400" height="128" rx="12" fill="url(#gSlave)" stroke="#7D6608" stroke-width="2"/>
+    <text x="900" y="508" text-anchor="middle" font-size="17" font-weight="700" fill="#5B4304">Broker Slave</text>
+    <text x="900" y="528" text-anchor="middle" font-size="12" fill="#7D6608">服务端从节点 (副本)</text>
+    <text x="900" y="548" text-anchor="middle" font-size="11" fill="#9A7D0A" font-style="italic">DefaultHAService · HAConnection</text>
+    <text x="900" y="566" text-anchor="middle" font-size="11" fill="#9A7D0A" font-style="italic">WriteSocketService / ReadSocketService (12B header)</text>
+    <text x="900" y="586" text-anchor="middle" font-size="10" fill="#7D6608">GroupTransferService · SlaveSynchronize.syncAll()</text>
+  </g>
+
+  <!-- ============= 存储层 ============= -->
+  <g filter="url(#shadow)">
+    <rect x="180" y="700" width="220" height="80" rx="10" fill="url(#gStore)" stroke="#566573" stroke-width="2"/>
+    <text x="290" y="730" text-anchor="middle" font-size="15" font-weight="700" fill="#2C3E50">CommitLog</text>
+    <text x="290" y="752" text-anchor="middle" font-size="11" fill="#5D6D7E">主存储 · 顺序写</text>
+    <text x="290" y="768" text-anchor="middle" font-size="10" fill="#7B8794" font-style="italic">MappedFile · asyncPutMessage</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="530" y="700" width="220" height="80" rx="10" fill="url(#gStore)" stroke="#566573" stroke-width="2"/>
+    <text x="640" y="730" text-anchor="middle" font-size="15" font-weight="700" fill="#2C3E50">ConsumeQueue</text>
+    <text x="640" y="752" text-anchor="middle" font-size="11" fill="#5D6D7E">消费队列 (20B / 项)</text>
+    <text x="640" y="768" text-anchor="middle" font-size="10" fill="#7B8794" font-style="italic">offset · size · tagHash</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="880" y="700" width="220" height="80" rx="10" fill="url(#gStore)" stroke="#566573" stroke-width="2"/>
+    <text x="990" y="730" text-anchor="middle" font-size="15" font-weight="700" fill="#2C3E50">IndexFile</text>
+    <text x="990" y="752" text-anchor="middle" font-size="11" fill="#5D6D7E">索引文件 (哈希)</text>
+    <text x="990" y="768" text-anchor="middle" font-size="10" fill="#7B8794" font-style="italic">topicKey · uniqKey · timeRange</text>
+  </g>
+
+  <!-- ============= 通信箭头 ============= -->
+  <!-- Producer → NameServer: 路由查询 -->
+  <path d="M 260 216 C 240 240, 220 260, 210 288" fill="none" stroke="#34495E" stroke-width="2" marker-end="url(#arrTCP)"/>
+  <text x="195" y="252" font-size="11" fill="#34495E" font-weight="600">① 路由发现</text>
+  <text x="195" y="266" font-size="10" fill="#5D6D7E">TopicRouteData</text>
+
+  <!-- Producer → Proxy: gRPC 发送 -->
+  <path d="M 380 180 C 450 180, 480 240, 530 300" fill="none" stroke="#E67E22" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrGRPC)"/>
+  <text x="392" y="232" font-size="11" fill="#B9770E" font-weight="600">② Producer (gRPC)</text>
+  <text x="392" y="246" font-size="10" fill="#CA6F1E">SendMessage / Timer</text>
+
+  <!-- Producer → Broker: 直接 TCP 发送 -->
+  <path d="M 340 216 C 340 320, 340 420, 350 478" fill="none" stroke="#34495E" stroke-width="2" marker-end="url(#arrTCP)"/>
+  <text x="352" y="402" font-size="11" fill="#34495E" font-weight="600">③ send (TCP)</text>
+  <text x="352" y="416" font-size="10" fill="#5D6D7E">RemotingCommand · SEND_MSG</text>
+
+  <!-- Consumer → NameServer: 路由查询 -->
+  <path d="M 900 200 C 700 230, 380 250, 280 288" fill="none" stroke="#34495E" stroke-width="2" marker-end="url(#arrTCP)"/>
+  <text x="560" y="232" font-size="11" fill="#34495E" font-weight="600">④ 路由发现</text>
+
+  <!-- Consumer → Proxy: gRPC 拉/Pop -->
+  <path d="M 900 200 C 800 240, 720 270, 700 300" fill="none" stroke="#E67E22" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrGRPC)"/>
+  <text x="745" y="232" font-size="11" fill="#B9770E" font-weight="600">⑤ Receive / Pop (gRPC)</text>
+
+  <!-- Consumer → Broker: TCP 拉/Pop -->
+  <path d="M 940 216 C 940 320, 700 420, 580 478" fill="none" stroke="#34495E" stroke-width="2" marker-end="url(#arrTCP)"/>
+  <text x="745" y="402" font-size="11" fill="#34495E" font-weight="600">⑥ Pull / Pop (TCP)</text>
+  <text x="745" y="416" font-size="10" fill="#5D6D7E">PULL_MSG · POP_MSG</text>
+
+  <!-- Proxy → Broker Master: 内部 Remoting 桥接 -->
+  <path d="M 600 388 C 560 420, 480 440, 460 478" fill="none" stroke="#5D6D7E" stroke-width="2" marker-end="url(#arrTCP2)"/>
+  <text x="448" y="430" font-size="11" fill="#5D6D7E" font-weight="600">⑦ 转发 (TCP)</text>
+  <text x="448" y="444" font-size="10" fill="#7B8794">桥接至 Broker</text>
+
+  <!-- Broker Master ↔ Broker Slave: HA 同步 -->
+  <path d="M 580 520 L 700 520" fill="none" stroke="#27AE60" stroke-width="3.5" marker-end="url(#arrHA)"/>
+  <path d="M 700 560 L 580 560" fill="none" stroke="#27AE60" stroke-width="3.5" marker-end="url(#arrHA)"/>
+  <text x="640" y="510" text-anchor="middle" font-size="11" fill="#1E8449" font-weight="700">⑧ HA 同步</text>
+  <text x="640" y="576" text-anchor="middle" font-size="10" fill="#27AE60">CommitLog 实时复制 · GroupTransfer</text>
+
+  <!-- Broker Master → NameServer: 心跳注册 -->
+  <path d="M 250 478 C 220 430, 200 410, 200 388" fill="none" stroke="#34495E" stroke-width="2" marker-end="url(#arrTCP)"/>
+  <text x="100" y="430" font-size="11" fill="#34495E" font-weight="600">⑨ 心跳注册</text>
+  <text x="100" y="444" font-size="10" fill="#5D6D7E">30s REGISTER_BROKER</text>
+
+  <!-- Broker Slave → Controller: 注册/选主 -->
+  <path d="M 1020 478 C 1050 440, 1070 410, 1070 388" fill="none" stroke="#C0392B" stroke-width="2" marker-end="url(#arrCtrl)"/>
+  <text x="1086" y="430" font-size="11" fill="#922B21" font-weight="600">⑩ 注册选主</text>
+  <text x="1086" y="444" font-size="10" fill="#A93226">ReplicasManager</text>
+
+  <!-- Broker Master → 存储层 -->
+  <path d="M 320 606 L 300 700" fill="none" stroke="#5D6D7E" stroke-width="2" marker-end="url(#arrTCP2)"/>
+  <path d="M 420 606 L 620 700" fill="none" stroke="#5D6D7E" stroke-width="2" marker-end="url(#arrTCP2)"/>
+  <path d="M 520 606 L 940 700" fill="none" stroke="#5D6D7E" stroke-width="2" marker-end="url(#arrTCP2)"/>
+  <text x="332" y="652" font-size="10" fill="#5D6D7E" font-style="italic">写 CommitLog → dispatch → CQ / Index</text>
+
+  <!-- Broker Slave → 存储 (只读副本) -->
+  <path d="M 900 606 L 950 700" fill="none" stroke="#7B8794" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrTCP2)"/>
+  <text x="908" y="660" font-size="10" fill="#7B8794" font-style="italic">副本只读</text>
+
+  <!-- ============= 图例 ============= -->
+  <g>
+    <rect x="100" y="816" width="1080" height="92" rx="10" fill="#FFFFFF" stroke="#D5DBDB" stroke-width="1"/>
+    <text x="120" y="840" font-size="12" font-weight="700" fill="#34495E">图例 LEGEND</text>
+
+    <!-- TCP 实线 -->
+    <line x1="130" y1="866" x2="180" y2="866" stroke="#34495E" stroke-width="2" marker-end="url(#arrTCP)"/>
+    <text x="190" y="870" font-size="11" fill="#34495E">RemotingCommand (TCP/Netty)</text>
+
+    <!-- gRPC 虚线 -->
+    <line x1="380" y1="866" x2="430" y2="866" stroke="#E67E22" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrGRPC)"/>
+    <text x="440" y="870" font-size="11" fill="#B9770E">gRPC (HTTP/2)</text>
+
+    <!-- HA 同步粗线 -->
+    <line x1="580" y1="866" x2="630" y2="866" stroke="#27AE60" stroke-width="3.5" marker-end="url(#arrHA)"/>
+    <text x="640" y="870" font-size="11" fill="#1E8449">HA 主从同步 (HAService)</text>
+
+    <!-- Controller 注册 -->
+    <line x1="820" y1="866" x2="870" y2="866" stroke="#C0392B" stroke-width="2" marker-end="url(#arrCtrl)"/>
+    <text x="880" y="870" font-size="11" fill="#922B21">Controller 注册/选主</text>
+
+    <!-- 副本只读 -->
+    <line x1="1020" y1="866" x2="1070" y2="866" stroke="#7B8794" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrTCP2)"/>
+    <text x="1080" y="870" font-size="11" fill="#7B8794">副本只读访问</text>
+
+    <text x="120" y="894" font-size="10" fill="#85929E">注：① ④ 客户端首次启动拉取 TopicRouteData 并本地缓存，30s 周期刷新； ⑨ Broker 每 30s 向所有 NameServer 注册； ⑧ HA 默认异步复制，可切换 SYNC_MASTER 同步。</text>
+  </g>
+</svg>
